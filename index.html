@@ -199,24 +199,24 @@ input[type=file]{display:none;}
 
 /* ── EERR CASCADE ── */
 .eerr{display:flex;flex-direction:column;gap:4px;margin-bottom:24px;}
-.eerr-wrap{overflow-x:auto;}
-.eerr-row{display:grid;grid-template-columns:28px minmax(180px,1fr) 56px 140px 130px 130px;align-items:center;gap:10px;padding:11px 18px;border-radius:8px;border:1px solid var(--border);background:var(--surface);transition:background 0.15s;}
+.eerr-wrap{overflow-x:auto;max-width:960px;margin:0 auto;}
+.eerr-row{display:grid;grid-template-columns:24px minmax(160px,1fr) 52px 148px 128px 128px;align-items:center;gap:8px;padding:11px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);transition:background 0.15s;}
 .eerr-row:hover{background:var(--surface2);}
 .eerr-row.subtotal{background:var(--surface2);border-color:var(--border2);}
 .eerr-row.total{background:linear-gradient(135deg,rgba(123,97,255,0.1),rgba(123,97,255,0.04));border-color:rgba(123,97,255,0.3);}
 .eerr-row.total-neg{background:linear-gradient(135deg,rgba(232,0,61,0.08),rgba(232,0,61,0.03));border-color:rgba(232,0,61,0.25);}
 .eerr-row.separator{border:none;background:transparent;padding:2px 0;}
-.eerr-row.eerr-header-row{background:transparent;border:none;padding:6px 18px 2px;}
+.eerr-row.eerr-header-row{background:transparent;border:none;padding:4px 16px 6px;}
 .eerr-op{font-size:13px;color:var(--muted);font-family:'DM Mono',monospace;text-align:center;}
 .eerr-label{font-size:13px;color:var(--muted2);}
 .eerr-row.subtotal .eerr-label,.eerr-row.total .eerr-label,.eerr-row.total-neg .eerr-label{color:var(--text);font-weight:700;font-size:14px;}
 .eerr-pct{font-size:11px;color:var(--muted);text-align:right;}
 .eerr-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;text-align:right;}
 .eerr-row.subtotal .eerr-val,.eerr-row.total .eerr-val,.eerr-row.total-neg .eerr-val{font-size:19px;}
-.eerr-comp{font-family:'DM Mono',monospace;font-size:11px;text-align:right;color:var(--muted2);}
-.eerr-comp2{font-family:'DM Mono',monospace;font-size:11px;text-align:right;color:var(--muted2);}
-.eerr-comp-hdr{font-size:11px;font-weight:700;letter-spacing:0.08em;text-align:right;color:var(--muted2);}
-.eerr-comp-hdr-sub{font-size:9px;color:var(--muted);text-align:right;letter-spacing:0.06em;}
+.eerr-comp{font-family:'DM Mono',monospace;font-size:12px;text-align:right;color:var(--muted2);}
+.eerr-comp2{font-family:'DM Mono',monospace;font-size:12px;text-align:right;color:var(--muted2);}
+.eerr-comp-hdr{font-size:13px;font-weight:700;letter-spacing:0.06em;text-align:right;color:var(--text);}
+.eerr-comp-hdr-sub{font-size:10px;color:var(--muted);text-align:right;letter-spacing:0.04em;margin-top:2px;}
 .eerr-note{font-size:8px;color:var(--muted);font-style:italic;padding:0 16px 8px;}
 
 /* ── DEPENDENCIA GAUGE ── */
@@ -499,9 +499,9 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
       <select class="filter-select" id="cr-mes-sel" onchange="setCRMes(this.value)" style="font-size:14px;font-weight:700;padding:8px 32px 8px 14px;">
         <option value="all">Todos</option>
       </select>
-      <div style="margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center">
-        <div style="font-family:'Syne',sans-serif;font-size:22px;font-weight:800;letter-spacing:-0.5px;color:var(--text);line-height:1" id="cr-period-label">Todos los datos</div>
-        <div style="font-size:11px;font-weight:400;color:var(--muted2);letter-spacing:0.18em;text-transform:uppercase" id="cr-period-sublabel">Estado de Resultados</div>
+      <div style="margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center">
+        <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.6px;color:var(--text);line-height:1" id="cr-period-label">Todos los datos</div>
+        <div style="font-size:12px;font-weight:500;color:var(--muted2);letter-spacing:0.22em;text-transform:uppercase" id="cr-period-sublabel">Estado de Resultados</div>
       </div>
     </div>
 
@@ -2427,19 +2427,19 @@ function renderPL(){
   if(showComp){
     html+=`<div class="eerr-row eerr-header-row">
       <div></div>
-      <div class="eerr-comp-hdr-sub" style="text-align:left;color:var(--muted);font-size:10px;letter-spacing:0.12em">LÍNEA</div>
-      <div class="eerr-comp-hdr-sub" style="text-align:right">%</div>
-      <div style="text-align:right">
-        <div class="eerr-comp-hdr">${mesShort(mesActual)}</div>
-        <div class="eerr-comp-hdr-sub">período seleccionado</div>
+      <div style="font-size:10px;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase">Concepto</div>
+      <div style="font-size:10px;color:var(--muted);text-align:right;letter-spacing:0.08em">%</div>
+      <div style="text-align:right;border-left:2px solid rgba(241,245,249,0.08);padding-left:8px">
+        <div class="eerr-comp-hdr" style="color:var(--text)">${mesShort(mesActual)}</div>
+        <div class="eerr-comp-hdr-sub" style="color:var(--muted)">período activo</div>
       </div>
-      <div style="text-align:right">
+      <div style="text-align:right;border-left:2px solid rgba(245,158,11,0.2);padding-left:8px">
         <div class="eerr-comp-hdr" style="color:var(--amber)">${mesShort(mesAnterior)||'—'}</div>
-        <div class="eerr-comp-hdr-sub">mes anterior</div>
+        <div class="eerr-comp-hdr-sub" style="color:var(--amber);opacity:0.7">mes anterior</div>
       </div>
-      <div style="text-align:right">
+      <div style="text-align:right;border-left:2px solid rgba(59,130,246,0.2);padding-left:8px">
         <div class="eerr-comp-hdr" style="color:var(--blue)">${mesShort(mesAnioAnt)||'—'}</div>
-        <div class="eerr-comp-hdr-sub">mismo mes año ant.</div>
+        <div class="eerr-comp-hdr-sub" style="color:var(--blue);opacity:0.7">mismo mes año ant.</div>
       </div>
     </div>`;
   }
