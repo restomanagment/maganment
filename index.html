@@ -499,15 +499,15 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
       <select class="filter-select" id="cr-mes-sel" onchange="setCRMes(this.value)" style="font-size:14px;font-weight:700;padding:8px 32px 8px 14px;">
         <option value="all">Todos</option>
       </select>
-      <div style="margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center">
-        <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.8px;color:var(--text);line-height:1" id="cr-period-label">Todos los datos</div>
-        <div style="font-size:11px;font-weight:500;color:var(--muted2);letter-spacing:0.24em;text-transform:uppercase;margin-top:2px" id="cr-period-sublabel">Estado de Resultados Económico</div>
-      </div>
     </div>
 
     <!-- BLOQUE 1: ESTADO DE RESULTADOS (cascada compacta) -->
     <div class="cr-section anim d1">
       <div class="cr-section-label">ESTADO DE RESULTADOS</div>
+      <div style="text-align:center;margin-bottom:20px;">
+        <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.8px;color:var(--text);line-height:1" id="cr-period-label">Todos los datos</div>
+        <div style="font-size:11px;font-weight:500;color:var(--muted2);letter-spacing:0.24em;text-transform:uppercase;margin-top:6px" id="cr-period-sublabel">Estado de Resultados Económico</div>
+      </div>
       <div id="pl-waterfall"></div>
       <div class="kpi-grid" style="margin-top:14px;" id="pl-kpis"></div>
     </div>
