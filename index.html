@@ -2310,8 +2310,10 @@ function renderPL(){
   const fOrders=filterFudoByPeriod(ST.fudo.enriched);
   // Ventas brutas: total + desc para reconstruir precio original
   // Descuentos: solo canal propio (PY ya viene neto de descuentos desde la plataforma)
-  const fBruto=fOrders.reduce((s,o)=>s+(o.total+(o.canal==='propio'?o.desc:0)),0);
-  const fDesc=fOrders.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.desc,0);
+  // canal puede ser null en datos viejos de Supabase — inferir desde origen
+  const getCanal=o=>o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio');
+  const fBruto=fOrders.reduce((s,o)=>s+(o.total+(getCanal(o)==='propio'?o.desc:0)),0);
+  const fDesc=fOrders.filter(o=>getCanal(o)==='propio').reduce((s,o)=>s+o.desc,0);
   const fNeta=fBruto-fDesc; // = fOrders total (precio pagado por cliente)
   const fOrdenesPY=fOrders.filter(o=>o.canal==='py');
   const fBrutoPY=fOrdenesPY.reduce((s,o)=>s+o.total,0);
