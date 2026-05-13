@@ -1833,6 +1833,7 @@ function renderAlerts(){
 // CONTROL ROOM
 // ══════════════════════════════════════════════════════
 function renderControlRoom(){
+  populateCRMesSel();
   const c=ST.computed;
 
   // ── NIVEL 1: MÉTRICAS MAESTRAS ──
@@ -2230,15 +2231,12 @@ function setCRPeriod(p,btn){
 }
 
 function getCRDateRange(){
-  const now=new Date();
   const p=CR_PERIOD.value;
-  if(p==='total')return{from:null,to:null};
-  const to=new Date(now.getFullYear(),now.getMonth()+1,0); // fin de mes actual
-  let from;
-  if(p==='mes') from=new Date(now.getFullYear(),now.getMonth(),1);
-  else if(p==='trimestre') from=new Date(now.getFullYear(),now.getMonth()-2,1);
-  else if(p==='semestre') from=new Date(now.getFullYear(),now.getMonth()-5,1);
-  else if(p==='anio') from=new Date(now.getFullYear(),0,1);
+  if(!p||p==='all')return{from:null,to:null};
+  // p es YYYY-MM
+  const [y,m]=p.split('-').map(Number);
+  const from=new Date(y,m-1,1);
+  const to=new Date(y,m,0,23,59,59,999);
   return{from,to};
 }
 
