@@ -199,18 +199,20 @@ input[type=file]{display:none;}
 
 /* ── EERR CASCADE ── */
 .eerr{display:flex;flex-direction:column;gap:4px;margin-bottom:24px;}
-.eerr-row{display:grid;grid-template-columns:28px 1fr auto auto;align-items:center;gap:12px;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);transition:background 0.15s;}
+.eerr-row{display:grid;grid-template-columns:28px 1fr auto auto auto auto;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);transition:background 0.15s;}
 .eerr-row:hover{background:var(--surface2);}
 .eerr-row.subtotal{background:var(--surface2);border-color:var(--border2);}
 .eerr-row.total{background:linear-gradient(135deg,rgba(123,97,255,0.1),rgba(123,97,255,0.04));border-color:rgba(123,97,255,0.3);}
 .eerr-row.total-neg{background:linear-gradient(135deg,rgba(232,0,61,0.08),rgba(232,0,61,0.03));border-color:rgba(232,0,61,0.25);}
 .eerr-row.separator{border:none;background:transparent;padding:2px 0;}
-.eerr-op{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;text-align:center;}
-.eerr-label{font-size:10px;color:var(--muted2);}
-.eerr-row.subtotal .eerr-label,.eerr-row.total .eerr-label,.eerr-row.total-neg .eerr-label{color:var(--text);font-weight:600;font-size:11px;}
-.eerr-pct{font-size:9px;color:var(--muted);min-width:60px;text-align:right;}
-.eerr-val{font-family:'Syne',sans-serif;font-size:13px;font-weight:700;min-width:110px;text-align:right;}
-.eerr-row.subtotal .eerr-val,.eerr-row.total .eerr-val,.eerr-row.total-neg .eerr-val{font-size:16px;}
+.eerr-op{font-size:13px;color:var(--muted);font-family:'DM Mono',monospace;text-align:center;}
+.eerr-label{font-size:13px;color:var(--muted2);}
+.eerr-row.subtotal .eerr-label,.eerr-row.total .eerr-label,.eerr-row.total-neg .eerr-label{color:var(--text);font-weight:700;font-size:14px;}
+.eerr-pct{font-size:10px;color:var(--muted);min-width:52px;text-align:right;}
+.eerr-val{font-family:'Syne',sans-serif;font-size:15px;font-weight:700;min-width:130px;text-align:right;}
+.eerr-row.subtotal .eerr-val,.eerr-row.total .eerr-val,.eerr-row.total-neg .eerr-val{font-size:19px;}
+.eerr-comp{font-family:'DM Mono',monospace;font-size:10px;min-width:110px;text-align:right;color:var(--muted);}
+.eerr-comp2{font-family:'DM Mono',monospace;font-size:10px;min-width:110px;text-align:right;color:var(--muted);}
 .eerr-note{font-size:8px;color:var(--muted);font-style:italic;padding:0 16px 8px;}
 
 /* ── DEPENDENCIA GAUGE ── */
@@ -488,12 +490,15 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
     <div class="alerts-bar anim d1" id="alerts-bar"></div>
 
     <!-- FILTRO PERÍODO -->
-    <div class="filter-bar anim d1" style="margin-bottom:16px;">
-      <span class="filter-label">MES</span>
-      <select class="filter-select" id="cr-mes-sel" onchange="setCRMes(this.value)">
+    <div class="filter-bar anim d1" style="margin-bottom:16px;align-items:center;">
+      <span class="filter-label" style="font-size:13px;font-weight:700;letter-spacing:0.12em">MES</span>
+      <select class="filter-select" id="cr-mes-sel" onchange="setCRMes(this.value)" style="font-size:14px;font-weight:700;padding:8px 32px 8px 14px;">
         <option value="all">Todos</option>
       </select>
-      <div style="margin-left:auto;font-size:9px;color:var(--muted)" id="cr-period-label">Todos los datos</div>
+      <div style="margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:2px">
+        <div style="font-family:'Syne',sans-serif;font-size:16px;font-weight:800;letter-spacing:-0.3px;color:var(--text)" id="cr-period-label">Todos los datos</div>
+        <div style="font-size:9px;color:var(--muted);letter-spacing:0.1em" id="cr-period-sublabel">ESTADO DE RESULTADOS</div>
+      </div>
     </div>
 
     <!-- BLOQUE 1: ESTADO DE RESULTADOS (cascada compacta) -->
@@ -1853,7 +1858,10 @@ function populateCRMesSel(){
 
 function setCRMes(mes){
   CR_PERIOD.value=mes;
-  document.getElementById('cr-period-label').textContent=mes==='all'?'Todos los datos':mes;
+  const ML2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+  let label='Todos los datos';
+  if(mes!=='all'){const[y,m]=mes.split('-');label='EERR '+ML2[parseInt(m)-1].toUpperCase()+' '+y;}
+  document.getElementById('cr-period-label').textContent=label;
   renderControlRoom();
 }
 
@@ -2343,39 +2351,106 @@ function renderPL(){
   const hasFudo=fBruto>0;
   const hasPY=pyComision>0||ST.py.ventas.length>0;
 
+  // ── COMPARATIVOS ──
+  const mesActual=CR_PERIOD.value&&CR_PERIOD.value!=='all'?CR_PERIOD.value:null;
+  function getMesOffset(mes,offset){
+    if(!mes)return null;
+    const[y,m]=mes.split('-').map(Number);
+    let nm=m+offset,ny=y;
+    while(nm<1){nm+=12;ny--;}while(nm>12){nm-=12;ny++;}
+    return `${ny}-${String(nm).padStart(2,'0')}`;
+  }
+  const mesAnterior=getMesOffset(mesActual,-1);
+  const mesAnioAnt=getMesOffset(mesActual,-12);
+
+  function calcPLForMes(mes){
+    if(!mes)return null;
+    const fO=ST.fudo.enriched.filter(o=>o.mes===mes);
+    if(!fO.length)return null;
+    const getC2=o=>o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio');
+    const br2=fO.reduce((s,o)=>s+o.total,0);
+    const desc2=fO.filter(o=>getC2(o)==='propio').reduce((s,o)=>s+o.desc,0);
+    const neta2=br2-desc2;
+    const pyV2=ST.py.ventas.filter(r=>{
+      const d=nc(r,'Fecha de Pedido','Fecha del pedido');if(!d)return false;
+      const s2=String(d).trim();
+      const dt=s2.includes('-')?new Date(s2.split(' ')[0]+'T00:00:00Z'):s2.includes('/')?new Date(+s2.split('/')[2],s2.split('/')[1]-1,+s2.split('/')[0]):new Date(s2);
+      if(isNaN(dt))return false;
+      return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`===mes;
+    });
+    const com2=pyV2.reduce((s,r)=>s+num(nc(r,'Servicio Ventas PedidoYa ($)','Servicio Ventas PedidosYa ($)')),0);
+    const rec2=ST.py.cargos.filter(r=>{const d=nc(r,'Fecha del pedido');if(!d)return false;const s2=String(d).trim();const dt=s2.includes('-')?new Date(s2.split(' ')[0]+'T00:00:00Z'):s2.includes('/')?new Date(+s2.split('/')[2],s2.split('/')[1]-1,+s2.split('/')[0]):new Date(s2);if(isNaN(dt))return false;return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`===mes;}).reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
+    const rei2=ST.py.reintegros.filter(r=>{const d=nc(r,'Fecha del pedido');if(!d)return false;const s2=String(d).trim();const dt=s2.includes('-')?new Date(s2.split(' ')[0]+'T00:00:00Z'):s2.includes('/')?new Date(+s2.split('/')[2],s2.split('/')[1]-1,+s2.split('/')[0]):new Date(s2);if(isNaN(dt))return false;return `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`===mes;}).reduce((s,r)=>s+num(nc(r,'Monto neto a reintegrar')),0);
+    const netoR2=neta2-com2-rec2+rei2;
+    const gast2=ST.fudo.gastos.filter(g=>getMesKey(g)===mes).reduce((s,g)=>s+num(g['Importe']),0);
+    return{br:br2,desc:desc2,neta:neta2,com:com2,rec:rec2,rei:rei2,netoR:netoR2,gast:gast2,res:netoR2-gast2};
+  }
+
+  const cmpAnt=mesAnterior?calcPLForMes(mesAnterior):null;
+  const cmpAnioAnt=mesAnioAnt?calcPLForMes(mesAnioAnt):null;
+  const showComp=!!mesActual;
+
+  const ML3=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  function mesShort(m){if(!m)return'—';const[y,mo]=m.split('-');return ML3[parseInt(mo)-1]+"'"+y.slice(2);}
+
+  function fmtC(v,ref){
+    if(v===null||v===undefined)return '<span style="opacity:0.3">—</span>';
+    const delta=ref!==null&&ref!==undefined&&ref!==0?((v-ref)/Math.abs(ref)*100):null;
+    const col=v>=0?'#10B981':'#E8003D';
+    const dCol=delta!==null?(delta>=0?'#10B981':'#E8003D'):'var(--muted)';
+    const dStr=delta!==null?` <span style="font-size:8px;color:${dCol}">${delta>=0?'+':''}${delta.toFixed(0)}%</span>`:'';
+    return `<span style="color:${col};font-size:11px">${fmt(v)}</span>${dStr}`;
+  }
+
   // ── EERR CASCADA ──
-  const mkRow=(op,label,val,refBase,cls='',nota='')=>{
+  const mkRow=(op,label,val,refBase,cls='',nota='',c1val,c2val)=>{
     const pctStr=refBase&&val?`${(Math.abs(val)/refBase*100).toFixed(1)}%`:'';
     const valColor=val>=0?'var(--green)':'var(--red)';
+    const col1=showComp&&c1val!==undefined?fmtC(c1val,val):'';
+    const col2=showComp&&c2val!==undefined?fmtC(c2val,val):'';
+    const compCols=showComp?`<div class="eerr-comp">${col1||'<span style="opacity:0.3">—</span>'}</div><div class="eerr-comp2">${col2||'<span style="opacity:0.3">—</span>'}</div>`:'';
     return `<div class="eerr-row ${cls}">
       <div class="eerr-op">${op}</div>
-      <div class="eerr-label">${label}${nota?`<span style="color:var(--muted);font-size:8px;margin-left:6px">${nota}</span>`:''}</div>
+      <div class="eerr-label">${label}${nota?`<span style="color:var(--muted);font-size:9px;margin-left:6px">${nota}</span>`:''}</div>
       <div class="eerr-pct">${pctStr}</div>
       <div class="eerr-val" style="color:${valColor}">${val!==null?fmtF(val):'—'}</div>
+      ${compCols}
     </div>`;
   };
 
+  // Header comparativo
   let html='<div class="eerr">';
-  html+=mkRow('','Ventas Brutas',hasFudo?fBruto:null,null,'','Fudo — todos los canales · precio cobrado');
-  html+=mkRow('−','Descuentos canal propio',hasFudo&&fDesc?-fDesc:null,fBruto,'','aplicados en local');
-  html+=mkRow('=','VENTAS NETAS',hasFudo?fNeta:null,fBruto,'subtotal','base para márgenes');
+  if(showComp){
+    html+=`<div class="eerr-row" style="background:transparent;border-color:transparent;padding:4px 16px;">
+      <div class="eerr-op"></div><div class="eerr-label" style="font-size:9px;color:var(--muted);letter-spacing:0.1em">LÍNEA</div>
+      <div class="eerr-pct" style="font-size:9px;color:var(--muted)">%</div>
+      <div class="eerr-val" style="font-size:9px;color:var(--muted2);font-family:'DM Mono',monospace">${mesShort(mesActual)}</div>
+      <div class="eerr-comp" style="font-size:9px;color:var(--muted)">${mesShort(mesAnterior)}</div>
+      <div class="eerr-comp2" style="font-size:9px;color:var(--muted)">${mesShort(mesAnioAnt)}</div>
+    </div>`;
+  }
+  html+=mkRow('','Ventas Brutas',hasFudo?fBruto:null,null,'','',cmpAnt?.br,cmpAnioAnt?.br);
+  html+=mkRow('−','Descuentos canal propio',hasFudo&&fDesc?-fDesc:null,fBruto,'','',cmpAnt?.desc?-cmpAnt.desc:null,cmpAnioAnt?.desc?-cmpAnioAnt.desc:null);
+  html+=mkRow('=','VENTAS NETAS',hasFudo?fNeta:null,fBruto,'subtotal','',cmpAnt?.neta,cmpAnioAnt?.neta);
   html+=`<div class="eerr-row separator"></div>`;
-  html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNeta,'','sobre ventas canal PY');
-  html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNeta,'');
-  html+=mkRow('+','Reintegros recibidos',hasPY?pyReintegros:null,fNeta,'');
-  html+=mkRow('=','NETO REAL',hasFudo||hasPY?netoReal:null,fBruto,'subtotal','');
+  html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNeta,'','',cmpAnt?.com?-cmpAnt.com:null,cmpAnioAnt?.com?-cmpAnioAnt.com:null);
+  html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNeta,'','',cmpAnt?.rec?-cmpAnt.rec:null,cmpAnioAnt?.rec?-cmpAnioAnt.rec:null);
+  html+=mkRow('+','Reintegros recibidos',hasPY?pyReintegros:null,fNeta,'','',cmpAnt?.rei,cmpAnioAnt?.rei);
+  html+=mkRow('=','NETO REAL',hasFudo||hasPY?netoReal:null,fBruto,'subtotal','',cmpAnt?.netoR,cmpAnioAnt?.netoR);
   html+=`<div class="eerr-row separator"></div>`;
 
   if(gastos>0){
-    Object.entries(gC).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{
-      html+=mkRow('−',cat,-val,fBruto,'');
+    Object.entries(gC).sort((a,b)=>b[1]-a[1]).forEach(([cat,v2])=>{
+      const ca1=cmpAnt?ST.fudo.gastos.filter(g=>getMesKey(g)===mesAnterior&&(g['Categoría']||gCat(g['Proveedor'])||'Varios')===cat).reduce((s,g)=>s+num(g['Importe']),0):null;
+      const ca2=cmpAnioAnt?ST.fudo.gastos.filter(g=>getMesKey(g)===mesAnioAnt&&(g['Categoría']||gCat(g['Proveedor'])||'Varios')===cat).reduce((s,g)=>s+num(g['Importe']),0):null;
+      html+=mkRow('−',cat,-v2,fBruto,'','',ca1?-ca1:null,ca2?-ca2:null);
     });
   } else {
-    html+=mkRow('−','Gastos operativos (Fudo)',null,null,'','cargá gastos en Fudo');
+    html+=mkRow('−','Gastos operativos (Fudo)',null,null,'');
   }
   html+=`<div class="eerr-row separator"></div>`;
   const resCls=resultado>=0?'total':'total-neg';
-  html+=mkRow('=','RESULTADO OPERATIVO',hasFudo||hasPY?resultado:null,fBruto,resCls,'');
+  html+=mkRow('=','RESULTADO OPERATIVO',hasFudo||hasPY?resultado:null,fBruto,resCls,'',cmpAnt?.res,cmpAnioAnt?.res);
   html+='</div>';
 
   (document.getElementById('pl-waterfall')||{set innerHTML(v){}} ).innerHTML=html;
