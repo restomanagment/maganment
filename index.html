@@ -1235,7 +1235,7 @@ async function loadFromSupabase(){
     if(fudoO.length){
       ST.fudo.enriched=fudoO.map(o=>({
         id:o.fudo_id.split('_')[0], total:o.total, neto:o.neto, desc:o.descuento,
-        mes:o.mes, hora:o.hora, brand:o.brand, canal:o.canal, origen:o.origen,
+        mes:o.mes, hora:o.hora, brand:o.brand, canal:o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio'), origen:o.origen,
         fecha:o.fecha?new Date(o.fecha):null
       }));
       ST.fudo.loaded=true;
