@@ -3170,7 +3170,9 @@ function renderFudo(){
   const vD_propio=orders.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.desc,0);
   const vN=vB-vD_propio; // neto real: bruto menos solo descuentos propios (PY ya viene neto)
   const vD=vD_propio;
-  const pyV=orders.filter(o=>o.canal==='py').reduce((s,o)=>s+o.total,0);
+  const fOrdenesPYfilt=orders.filter(o=>o.canal==='py');
+  const pyV=fOrdenesPYfilt.reduce((s,o)=>s+o.total,0);
+  const pyNetoFudo=fOrdenesPYfilt.reduce((s,o)=>s+o.neto,0);
   const prV=orders.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.total,0);
   // Gastos filtrados por el mismo período que las órdenes
   const {dateFrom:fFrom,dateTo:fTo}=ST.filter.fudo;
@@ -3187,7 +3189,7 @@ function renderFudo(){
     {l:'VENTAS BRUTAS FUDO',v:fmt(vB),s:`${orders.length} pedidos`,a:'var(--blue)'},
     {l:'VENTAS NETAS',v:fmt(vN),s:pct(vN,vB)+' del bruto',a:'var(--green)'},
     {l:'DESC. CANAL PROPIO',v:fmt(vD_propio),s:'PY ya viene neto de plataforma',a:'var(--amber)'},
-    {l:'CANAL PY (ventas netas PY)',v:ST.computed.pyNetoPostDesc?fmt(ST.computed.pyNetoPostDesc):fmt(pyV),s:ST.computed.pyNetoPostDesc?'Bruto − desc. local · fuente PY':'fuente Fudo · sin datos PY',a:'var(--red)'},
+    {l:'CANAL PY (ventas netas)',v:fmt(pyNetoFudo),s:fOrdenesPYfilt.length+' pedidos PY · fuente Fudo filtrado',a:'var(--red)'},
     {l:'CANAL PROPIO',v:fmt(prV),s:pct(prV,vB)+' del total',a:'var(--blue)'},
     {l:'GASTOS FUDO',v:fmt(tG),s:`${gastosF.length} registros`,a:'var(--amber)'},
   ].map(k=>`<div class="kpi" style="--accent:${k.a}"><div class="kpi-label">${k.l}</div><div class="kpi-value">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
