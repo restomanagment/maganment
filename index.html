@@ -2021,15 +2021,7 @@ function renderPY(){
   const ca=filteredCar.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
 
   // KPIs PY — Nueva lógica con NETA como base
-  document.getElementById('py-kpis').innerHTML=[
-    {l:'VENTAS BRUTAS PY',v:fmt(br),s:`${rows.length} pedidos`,a:'var(--green)'},
-    {l:'DESC. LOCAL',v:fmt(dL),s:pct(dL,br)+' del bruto',a:'var(--amber)'},
-    {l:'VENTAS NETAS PY',v:fmt(ne),s:'Base para comisión',a:'var(--green)'},
-    {l:'COMISIÓN PY',v:fmt(co),s:pct(co,ne)+' del neto',a:'var(--red)'},
-    {l:'REINTEGROS',v:fmt(re),s:`${ST.py.reintegros.length} órdenes recibidas`,a:'var(--green)'},
-    {l:'CARGOS RECLAMOS',v:fmt(ca),s:`${ST.py.cargos.length} reclamos`,a:'var(--red)'},
-    {l:'NETO REAL PY',v:fmt(ne-co+re-ca),s:pct(ne-co+re-ca,br)+' del bruto',a:'#7B61FF',cls:'highlight'},
-  ].map(k=>`<div class="kpi" style="--accent:${k.a}"><div class="kpi-label">${k.l}</div><div class="kpi-value">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
+
 
   // Liquidación PY
   const netoReal=ne-co+re-ca;
