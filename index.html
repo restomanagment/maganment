@@ -500,8 +500,8 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
         <option value="all">Todos</option>
       </select>
       <div style="margin-left:auto;display:flex;flex-direction:column;align-items:center;gap:5px;text-align:center">
-        <div style="font-family:'Syne',sans-serif;font-size:26px;font-weight:800;letter-spacing:-0.6px;color:var(--text);line-height:1" id="cr-period-label">Todos los datos</div>
-        <div style="font-size:12px;font-weight:500;color:var(--muted2);letter-spacing:0.22em;text-transform:uppercase" id="cr-period-sublabel">Estado de Resultados</div>
+        <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.8px;color:var(--text);line-height:1" id="cr-period-label">Todos los datos</div>
+        <div style="font-size:11px;font-weight:500;color:var(--muted2);letter-spacing:0.24em;text-transform:uppercase;margin-top:2px" id="cr-period-sublabel">Estado de Resultados Económico</div>
       </div>
     </div>
 
@@ -1864,7 +1864,7 @@ function setCRMes(mes){
   CR_PERIOD.value=mes;
   const ML2=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
   let label='Todos los datos';
-  if(mes!=='all'){const[y,m]=mes.split('-');label='EERR '+ML2[parseInt(m)-1].toUpperCase()+' '+y;}
+  if(mes!=='all'){const[y,m]=mes.split('-');label=ML2[parseInt(m)-1].toUpperCase()+' '+y;}
   document.getElementById('cr-period-label').textContent=label;
   renderControlRoom();
 }
