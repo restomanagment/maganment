@@ -486,14 +486,10 @@ tr:hover td{background:var(--surface2);}
 
     <!-- FILTRO PERÍODO -->
     <div class="filter-bar anim d1" style="margin-bottom:16px;">
-      <span class="filter-label">PERÍODO</span>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;">
-        <button class="cr-period-btn active" onclick="setCRPeriod('total',this)">Total</button>
-        <button class="cr-period-btn" onclick="setCRPeriod('mes',this)">Este mes</button>
-        <button class="cr-period-btn" onclick="setCRPeriod('trimestre',this)">Trimestre</button>
-        <button class="cr-period-btn" onclick="setCRPeriod('semestre',this)">Semestre</button>
-        <button class="cr-period-btn" onclick="setCRPeriod('anio',this)">Este año</button>
-      </div>
+      <span class="filter-label">MES</span>
+      <select class="filter-select" id="cr-mes-sel" onchange="setCRMes(this.value)">
+        <option value="all">Todos</option>
+      </select>
       <div style="margin-left:auto;font-size:9px;color:var(--muted)" id="cr-period-label">Todos los datos</div>
     </div>
 
@@ -2259,9 +2255,11 @@ function setCRPeriod(p,btn){
 
 function getCRDateRange(){
   const p=CR_PERIOD.value;
-  if(!p||p==='all')return{from:null,to:null};
+  if(!p||p==='all'||p==='total')return{from:null,to:null};
   // p es YYYY-MM
-  const [y,m]=p.split('-').map(Number);
+  const parts=p.split('-').map(Number);
+  if(parts.length<2||isNaN(parts[0])||isNaN(parts[1]))return{from:null,to:null};
+  const [y,m]=parts;
   const from=new Date(y,m-1,1);
   const to=new Date(y,m,0,23,59,59,999);
   return{from,to};
@@ -2272,7 +2270,9 @@ function filterFudoByPeriod(orders){
   if(!from)return orders;
   return orders.filter(o=>{
     if(!o.fecha)return false;
-    return o.fecha>=from&&o.fecha<=to;
+    const dt=new Date(String(o.fecha).split(' ')[0]+'T00:00:00Z');
+    if(isNaN(dt))return false;
+    return dt>=from&&dt<=to;
   });
 }
 
