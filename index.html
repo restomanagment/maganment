@@ -1169,7 +1169,7 @@ async function saveToSupabase(){
         mes: o.mes,
         hora: o.hora,
         brand: o.brand,
-        canal: o.canal,
+        canal: o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio'),
         origen: o.origen,
         total: o.total,
         neto: o.neto,
@@ -2310,11 +2310,12 @@ function renderPL(){
   const fOrders=filterFudoByPeriod(ST.fudo.enriched);
   // Ventas brutas: total + desc para reconstruir precio original
   // Descuentos: solo canal propio (PY ya viene neto de descuentos desde la plataforma)
-  // canal puede ser null en datos viejos de Supabase — inferir desde origen
+  // fBruto = precio real cobrado al cliente (o.total ya refleja precio con descuentos aplicados)
+  // No reconstruimos el precio de lista porque canal PY puede tener canal=null en Supabase
   const getCanal=o=>o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio');
-  const fBruto=fOrders.reduce((s,o)=>s+(o.total+(getCanal(o)==='propio'?o.desc:0)),0);
+  const fBruto=fOrders.reduce((s,o)=>s+o.total,0);
   const fDesc=fOrders.filter(o=>getCanal(o)==='propio').reduce((s,o)=>s+o.desc,0);
-  const fNeta=fBruto-fDesc; // = fOrders total (precio pagado por cliente)
+  const fNeta=fBruto; // precio cobrado = ventas netas de cara al negocio
   const fOrdenesPY=fOrders.filter(o=>o.canal==='py');
   const fBrutoPY=fOrdenesPY.reduce((s,o)=>s+o.total,0);
 
@@ -2921,7 +2922,7 @@ async function reimportarVentasFudo(input){
       fudo_id: String(o.id)+'_'+String(o.mes)+'_'+(o.fecha?o.fecha.getTime():'0'),
       fecha: o.fecha?o.fecha.toISOString():null,
       mes: o.mes, hora: o.hora, brand: o.brand,
-      canal: o.canal, origen: o.origen,
+      canal: o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio'), origen: o.origen,
       total: o.total, neto: o.neto, descuento: o.desc
     }));
     await batchUpsert('fudo_orders',rows,'fudo_id');
