@@ -3187,10 +3187,10 @@ function renderFudo(){
   const tG=gastosF.reduce((s,g)=>s+num(g['Importe']),0);
   (document.getElementById('fudo-kpis')||{set innerHTML(v){}} ).innerHTML=[
     {l:'VENTAS BRUTAS FUDO',v:fmt(vB),s:`${orders.length} pedidos`,a:'var(--blue)'},
-    {l:'VENTAS NETAS',v:fmt(vN),s:pct(vN,vB)+' del bruto',a:'var(--green)'},
     {l:'DESC. CANAL PROPIO',v:fmt(vD_propio),s:'PY ya viene neto de plataforma',a:'var(--amber)'},
+    {l:'VENTAS NETAS',v:fmt(vN),s:pct(vN,vB)+' del bruto',a:'var(--green)'},
+    {l:'CANAL PROPIO',v:fmt(vN-pyNetoFudo),s:pct(vN-pyNetoFudo,vN)+' del neto',a:'var(--blue)'},
     {l:'CANAL PY (ventas netas)',v:fmt(pyNetoFudo),s:fOrdenesPYfilt.length+' pedidos PY · fuente Fudo filtrado',a:'var(--red)'},
-    {l:'CANAL PROPIO',v:fmt(prV),s:pct(prV,vB)+' del total',a:'var(--blue)'},
     {l:'GASTOS FUDO',v:fmt(tG),s:`${gastosF.length} registros`,a:'var(--amber)'},
   ].map(k=>`<div class="kpi" style="--accent:${k.a}"><div class="kpi-label">${k.l}</div><div class="kpi-value">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
 
