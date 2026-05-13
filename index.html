@@ -1869,7 +1869,7 @@ function renderControlRoom(){
     {label:'COSTO REAL PY',value:fmt(c.costoRealPY),sub:`Comisión + cargos · ${c.costoRealPct?.toFixed(1)||0}% del neto`,color:'var(--red)',accent:'var(--red)'},
     {label:'DEPENDENCIA PY',value:(c.depPct||0).toFixed(0)+'%',sub:c.depPct>65?'⚠️ Zona de riesgo — diversificar':c.depPct>40?'🟡 Monitorear':'🟢 Nivel saludable',color:c.depPct>65?'var(--red)':c.depPct>40?'var(--amber)':'var(--green)',accent:c.depPct>65?'var(--red)':c.depPct>40?'var(--amber)':'var(--green)'},
   ];
-  document.getElementById('cr-top-kpis').innerHTML=masterItems.map(k=>`
+  (document.getElementById('cr-top-kpis')||{set innerHTML(v){}} ).innerHTML=masterItems.map(k=>`
     <div class="cr-master-kpi" style="--accent-line:${k.accent}">
       <div class="cr-label">${k.label}</div>
       <div class="cr-value" style="color:${k.color}">${k.value}</div>
@@ -1921,7 +1921,7 @@ function renderControlRoom(){
     });
     Object.assign(bs,pyBs);
   }
-  document.getElementById('cr-brands').innerHTML=Object.entries(bs).filter(([k])=>k!=='compartido').map(([k,b])=>{
+  (document.getElementById('cr-brands')||{set innerHTML(v){}} ).innerHTML=Object.entries(bs).filter(([k])=>k!=='compartido').map(([k,b])=>{
     const pctVal=total?(b.br/total*100).toFixed(0):0;
     const tk=b.p?Math.round(b.br/b.p):0;
     const pD=b.br&&b.de?(b.de/b.br*100).toFixed(0):0;
@@ -2086,7 +2086,7 @@ function renderPY(){
     bsObj[bk].dL+=num(nc(r,'Descuento otorgado por el local'));
     bsObj[bk].co+=num(nc(r,'Servicio Ventas PedidoYa ($)','Servicio Ventas PedidosYa ($)'));
   });
-  document.getElementById('py-brands').innerHTML=Object.entries(bsObj).filter(([k])=>k!=='compartido').map(([k,b])=>{
+  (document.getElementById('py-brands')||{set innerHTML(v){}} ).innerHTML=Object.entries(bsObj).filter(([k])=>k!=='compartido').map(([k,b])=>{
     const ne=b.br-b.dL;
     const re=reByBrand[k]||0;
     const ca=caByBrand[k]||0;
@@ -2148,12 +2148,12 @@ function renderPY(){
     const m=String(nc(r,'Motivo')||'Sin motivo');
     cargosPorMotivo[m]=(cargosPorMotivo[m]||0)+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios')));
   });
-  document.getElementById('cargos-summary').innerHTML=
+  (document.getElementById('cargos-summary')||{set innerHTML(v){}} ).innerHTML=
     `<span class="summary-pill neg">Total: ${fmtF(-ca_total)}</span>`+
     Object.entries(cargosPorMotivo).sort((a,b)=>b[1]-a[1]).map(([m,v])=>
       `<span class="summary-pill">${m}: ${fmt(v)}</span>`).join('');
 
-  document.getElementById('py-carg-body').innerHTML=filteredCar.slice().sort((a,b)=>String(nc(b,'Fecha del pedido')||'').localeCompare(String(nc(a,'Fecha del pedido')||''))).map(r=>{
+  (document.getElementById('py-carg-body')||{set innerHTML(v){}} ).innerHTML=filteredCar.slice().sort((a,b)=>String(nc(b,'Fecha del pedido')||'').localeCompare(String(nc(a,'Fecha del pedido')||''))).map(r=>{
     const b=BRANDS[bSuc(String(nc(r,'Sucursal')||''))]||BRANDS.compartido;
     const cargo=num(nc(r,'Cargos por reclamos de los usuarios'));
     return `<tr><td class="td-brand" style="color:${b.color}">${b.label}</td><td>${nc(r,'Fecha del pedido')||''}</td><td><span class="pill pill-red">${nc(r,'Motivo')||''}</span></td><td>${fmtF(num(nc(r,'Monto del Pedido')))}</td><td>${fmtF(num(nc(r,'Reintegro al usuario por reclamo')))}</td><td class="td-neg">${fmtF(cargo)}</td></tr>`;
@@ -2166,12 +2166,12 @@ function renderPY(){
     const t=String(nc(r,'Tipo de Reintegro')||'Otro').substring(0,30);
     reiPorTipo[t]=(reiPorTipo[t]||0)+num(nc(r,'Monto neto a reintegrar'));
   });
-  document.getElementById('reintegros-summary').innerHTML=
+  (document.getElementById('reintegros-summary')||{set innerHTML(v){}} ).innerHTML=
     `<span class="summary-pill pos">Total: +${fmtF(re_total)}</span>`+
     Object.entries(reiPorTipo).sort((a,b)=>b[1]-a[1]).map(([t,v])=>
       `<span class="summary-pill">${t}: ${fmt(v)}</span>`).join('');
 
-  document.getElementById('py-rei-body').innerHTML=ST.py.reintegros.sort((a,b)=>String(nc(b,'Fecha del pedido')||'').localeCompare(String(nc(a,'Fecha del pedido')||''))).map(r=>{
+  (document.getElementById('py-rei-body')||{set innerHTML(v){}} ).innerHTML=ST.py.reintegros.sort((a,b)=>String(nc(b,'Fecha del pedido')||'').localeCompare(String(nc(a,'Fecha del pedido')||''))).map(r=>{
     const b=BRANDS[bSuc(String(nc(r,'Sucursal')||''))]||BRANDS.compartido;
     return `<tr><td class="td-brand" style="color:${b.color}">${b.label}</td><td>${nc(r,'Fecha del pedido')||''}</td><td style="font-size:9px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${nc(r,'Tipo de Reintegro')||''}</td><td>${fmtF(num(nc(r,'Monto del Pedido')))}</td><td style="color:var(--muted)">${nc(r,'% de Reintegro')||''}</td><td class="td-pos">+${fmtF(num(nc(r,'Monto neto a reintegrar')))}</td></tr>`;
   }).join('');
@@ -2189,7 +2189,7 @@ function renderCanal(){if(!document.getElementById('canal-kpis'))return;
   const propioTk=propio.length?Math.round(propioTotal/propio.length):0;
   const pyTk=c.ticketPY;
 
-  document.getElementById('canal-kpis').innerHTML=[
+  (document.getElementById('canal-kpis')||{set innerHTML(v){}} ).innerHTML=[
     {l:'VENTAS CANAL PROPIO',v:fmt(propioTotal),s:`${propio.length} pedidos`,a:'var(--blue)'},
     {l:'MIX CANAL PROPIO',v:(c.mixPropio||0).toFixed(1)+'%',s:'objetivo: crecer a 35%+',a:c.mixPropio>35?'var(--green)':c.mixPropio>25?'var(--amber)':'var(--red)'},
     {l:'TICKET PROPIO',v:fmt(propioTk),s:`vs ${fmt(pyTk)} en PY`,a:'var(--blue)'},
@@ -2229,7 +2229,7 @@ function renderCanal(){if(!document.getElementById('canal-kpis'))return;
   // Saving proyectado
   const if35=total*0.35,if40=total*0.40;
   const comPY=c.pctComPY||0.20;
-  document.getElementById('canal-saving-kpis').innerHTML=[
+  (document.getElementById('canal-saving-kpis')||{set innerHTML(v){}} ).innerHTML=[
     {l:'AHORRO ACTUAL',v:fmt(c.ahorroCanal),s:`con ${(c.mixPropio||0).toFixed(0)}% canal propio`,a:'var(--green)'},
     {l:'AHORRO PROYECTADO 35%',v:fmt(if35*comPY),s:'si subís el canal propio a 35%',a:'var(--blue)'},
     {l:'AHORRO PROYECTADO 40%',v:fmt(if40*comPY),s:'potencial máximo estimado',a:'var(--purple)'},
@@ -2368,11 +2368,11 @@ function renderPL(){
   html+=mkRow('=','RESULTADO OPERATIVO',hasFudo||hasPY?resultado:null,fBruto,resCls,'');
   html+='</div>';
 
-  document.getElementById('pl-waterfall').innerHTML=html;
+  (document.getElementById('pl-waterfall')||{set innerHTML(v){}} ).innerHTML=html;
 
   // ── KPIs ──
   const margenPct=fBruto?resultado/fBruto*100:0;
-  document.getElementById('pl-kpis').innerHTML=[
+  (document.getElementById('pl-kpis')||{set innerHTML(v){}} ).innerHTML=[
     {l:'RESULTADO OPERATIVO',v:hasFudo?fmt(resultado):'sin datos',s:fBruto?margenPct.toFixed(1)+'% s/bruto':'',a:resultado>=0?'var(--green)':'var(--red)'},
     {l:'NETO REAL',v:hasFudo?fmt(netoReal):'sin datos',s:fBruto?pct(netoReal,fBruto)+' del bruto':'',a:'var(--purple)'},
     {l:'COSTO REAL PY',v:hasPY?fmt(costoRealPY):'sin datos',s:fNeta?pct(costoRealPY,fNeta)+' del neto':'',a:'var(--red)'},
@@ -2448,7 +2448,7 @@ function renderMarcas(){
   // Sort by neto descending (rentabilidad, not volume)
   const sorted=Object.entries(bs).sort((a,b)=>b[1].ne-a[1].ne);
 
-  document.getElementById('marcas-cards').innerHTML=sorted.map(([k,b],i)=>{
+  (document.getElementById('marcas-cards')||{set innerHTML(v){}} ).innerHTML=sorted.map(([k,b],i)=>{
     const pct=total?(b.br/total*100).toFixed(1):0;
     const pD=b.br?(b.de/b.br*100).toFixed(0):0;
     const tk=b.p?Math.round(b.br/b.p):0;
@@ -2507,7 +2507,7 @@ function renderMarcas(){
   document.getElementById('marcas-sub') && (document.getElementById('marcas-sub').textContent=`${smRows.length} combinaciones`);
   const marcasSubPills=document.getElementById('marcas-sub-pills');
   if(marcasSubPills)marcasSubPills.innerHTML=`<span class="summary-pill">${smRows.length} combinaciones</span>`+sorted.map(([k,b])=>`<span class="summary-pill" style="color:${b.color};border-color:${b.color}33">${b.label}: ${fmt(b.br)}</span>`).join('');
-  document.getElementById('marcas-body').innerHTML=smRows.map(r=>{
+  (document.getElementById('marcas-body')||{set innerHTML(v){}} ).innerHTML=smRows.map(r=>{
     const b=BRANDS[r.brand]||BRANDS.compartido;
     const tk=r.p?Math.round(r.br/r.p):0;
     const pD=r.br?(r.de/r.br*100).toFixed(1):0;
@@ -3143,7 +3143,7 @@ function renderFudo(){
   const prV=orders.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.total,0);
   const tG=ST.fudo.gastos.reduce((s,g)=>s+num(g['Importe']),0);
 
-  document.getElementById('fudo-kpis').innerHTML=[
+  (document.getElementById('fudo-kpis')||{set innerHTML(v){}} ).innerHTML=[
     {l:'VENTAS BRUTAS FUDO',v:fmt(vB),s:`${orders.length} pedidos`,a:'var(--blue)'},
     {l:'VENTAS NETAS',v:fmt(vN),s:pct(vN,vB)+' del bruto',a:'var(--green)'},
     {l:'DESCUENTOS',v:fmt(vD),s:pct(vD,vB)+' del bruto',a:'var(--amber)'},
@@ -3158,7 +3158,7 @@ function renderFudo(){
     if(!bs[bk])bs[bk]={...BRANDS[bk]||BRANDS.compartido,p:0,br:0,ne:0,de:0};
     bs[bk].p++;bs[bk].br+=o.total;bs[bk].ne+=o.neto;bs[bk].de+=o.desc;
   });
-  document.getElementById('fudo-brands').innerHTML=Object.entries(bs).map(([k,b])=>{
+  (document.getElementById('fudo-brands')||{set innerHTML(v){}} ).innerHTML=Object.entries(bs).map(([k,b])=>{
     const pp=vB?(b.br/vB*100).toFixed(1):0;
     const pD=b.br?(b.de/b.br*100).toFixed(1):0;
     const tk=b.p?Math.round(b.br/b.p):0;
@@ -3209,7 +3209,7 @@ function renderFudo(){
     Object.entries(gastoCatSum).sort((a,b)=>b[1]-a[1]).map(([c,v])=>
       `<span class="summary-pill">${c}: ${fmt(v)}</span>`).join('');
 
-  document.getElementById('fudo-gast-body').innerHTML=ST.fudo.gastos.sort((a,b)=>{
+  (document.getElementById('fudo-gast-body')||{set innerHTML(v){}} ).innerHTML=ST.fudo.gastos.sort((a,b)=>{
     const da=a['Fecha'] instanceof Date?a['Fecha']:new Date(a['Fecha']);
     const db=b['Fecha'] instanceof Date?b['Fecha']:new Date(b['Fecha']);
     return db-da;
@@ -3394,7 +3394,7 @@ function renderProveedores(){
 
 function renderTesoreria(){
   if(!ST.galicia.loaded){
-    document.getElementById('teso-body').innerHTML='<tr><td colspan="5" style="color:var(--muted);padding:16px">Cargá un extracto Galicia para ver tesorería</td></tr>';
+    (document.getElementById('teso-body')||{set innerHTML(v){}} ).innerHTML='<tr><td colspan="5" style="color:var(--muted);padding:16px">Cargá un extracto Galicia para ver tesorería</td></tr>';
     return;
   }
   const tbody=document.getElementById('teso-body');
@@ -3540,7 +3540,7 @@ function renderEgresos(){
   const mesesFiltro = fMes !== 'all' ? [fMes] : meses;
   const presupPeriodo = mesesFiltro.reduce((s,m)=>s+CATS_PRESUP.reduce((ss,c)=>ss+getPresup(m,c),0),0);
   const desvio = presupPeriodo ? total - presupPeriodo : null;
-  document.getElementById('egr-kpis').innerHTML=[
+  (document.getElementById('egr-kpis')||{set innerHTML(v){}} ).innerHTML=[
     {l:'TOTAL EJECUTADO',v:fmt(total),s:`${filtered.length} registros`,a:'var(--red)'},
     {l:'CATEGORÍA PRINCIPAL',v:topCat[0],s:fmt(topCat[1])+' · '+pct(topCat[1],total),a:'var(--amber)'},
     {l:'PRESUPUESTO PERÍODO',v:presupPeriodo?fmt(presupPeriodo):'Sin cargar',s:presupPeriodo?`${mesesFiltro.length} mes/es`:'Cargá abajo ↓',a:'var(--blue)'},
@@ -3559,7 +3559,7 @@ function renderEgresos(){
     byMes[m].items.push(g);
   });
   const mesesVis=Object.keys(byMes).sort().reverse();
-  document.getElementById('gastos-por-mes').innerHTML=mesesVis.length?mesesVis.map(mes=>{
+  (document.getElementById('gastos-por-mes')||{set innerHTML(v){}} ).innerHTML=mesesVis.length?mesesVis.map(mes=>{
     const d=byMes[mes];
     const catRows=Object.entries(d.cats).sort((a,b)=>b[1]-a[1]);
     const presupMes=CATS_PRESUP.reduce((s,c)=>s+getPresup(mes,c),0);
@@ -3570,7 +3570,7 @@ function renderEgresos(){
   const CAT_PILL={'Personal':'pill-red','Insumos':'pill-green','Logística':'pill-blue','Alquiler':'pill-blue','Servicios':'pill-purple','Impuestos':'pill-amber','Descartables':'pill-amber'};
   const egr_sum = document.getElementById('egr-detalle-summary');
   if(egr_sum) egr_sum.innerHTML = `<span class="summary-pill">${filtered.length} registros</span><span class="summary-pill neg">${fmtF(-total)}</span>`;
-  document.getElementById('egr-tabla-body').innerHTML=filtered.slice().sort((a,b)=>getMesKey(b).localeCompare(getMesKey(a))).map(g=>{const cat=g['Categoría']||gCat(g['Proveedor'])||'Varios';const pc=CAT_PILL[cat]||'pill-amber';return `<tr><td>${getFechaDisplay(g)}</td><td style="font-weight:500">${g['Proveedor']||''}</td><td><span class="pill ${pc}">${cat}</span></td><td style="color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g['Comentario']||''}</td><td>${g['Medio de pago']||''}</td><td class="td-neg" style="text-align:right">${fmtF(-num(g['Importe']))}</td></tr>`;}).join('');
+  (document.getElementById('egr-tabla-body')||{set innerHTML(v){}} ).innerHTML=filtered.slice().sort((a,b)=>getMesKey(b).localeCompare(getMesKey(a))).map(g=>{const cat=g['Categoría']||gCat(g['Proveedor'])||'Varios';const pc=CAT_PILL[cat]||'pill-amber';return `<tr><td>${getFechaDisplay(g)}</td><td style="font-weight:500">${g['Proveedor']||''}</td><td><span class="pill ${pc}">${cat}</span></td><td style="color:var(--muted);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${g['Comentario']||''}</td><td>${g['Medio de pago']||''}</td><td class="td-neg" style="text-align:right">${fmtF(-num(g['Importe']))}</td></tr>`;}).join('');
 }
 
 // ══════════════════════════════════════════════════════
