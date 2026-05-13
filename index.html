@@ -1460,24 +1460,24 @@ async function handleFiles(files,type){
         if(fn.includes('gastos')){
           const ws=wb.Sheets[wb.SheetNames[0]];
           const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-          const hi=raw.findIndex(r=>r.includes('Id')&&r.includes('Fecha')&&r.includes('Importe'));
-          if(hi>=0){const hdrs=raw[hi];for(let i=hi+1;i<raw.length;i++){const row={};hdrs.forEach((h,j)=>row[h]=raw[i][j]);if(row['Id']&&row['Cancelado']==='No')ST.fudo.gastos.push(row);}}
+          const hi=raw.findIndex(r=>Array.isArray(r)&&r.some(v=>String(v).trim()==='Id')&&r.some(v=>String(v).trim()==='Fecha')&&r.some(v=>String(v).trim()==='Importe'));
+          if(hi>=0){const hdrs=raw[hi].map(h=>String(h).trim());for(let i=hi+1;i<raw.length;i++){const row={};hdrs.forEach((h,j)=>row[h]=raw[i][j]);if(row['Id']&&String(row['Cancelado']).trim()==='No')ST.fudo.gastos.push(row);}}
         } else {
           for(const sn of wb.SheetNames){
             const ws=wb.Sheets[sn];
             if(sn==='Ventas'){
               const raw=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
-              const hi=raw.findIndex(r=>r.includes('Id')&&r.includes('Total')&&r.includes('Estado'));
-              if(hi>=0){const hdrs=raw[hi];for(let i=hi+1;i<raw.length;i++){const row={};hdrs.forEach((h,j)=>row[h]=raw[i][j]);if(row['Id']&&!['Eliminada','Cancelada'].includes(row['Estado'])){row['_s']='V';ST.fudo.orders.push(row);}}}
+              const hi=raw.findIndex(r=>Array.isArray(r)&&r.some(v=>String(v).trim()==='Id')&&r.some(v=>String(v).trim()==='Total')&&r.some(v=>String(v).trim()==='Estado'));
+              if(hi>=0){const hdrs=raw[hi].map(h=>String(h).trim());for(let i=hi+1;i<raw.length;i++){const row={};hdrs.forEach((h,j)=>row[h]=raw[i][j]);if(row['Id']&&!['Eliminada','Cancelada'].includes(row['Estado'])){row['_s']='V';ST.fudo.orders.push(row);}}}
             } else if(sn==='Adiciones'){
               const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-              rows.filter(r=>r['Cancelada']==='No').forEach(r=>{r['_s']='A';ST.fudo.orders.push(r);});
+              rows.filter(r=>String(r['Cancelada']).trim()==='No').forEach(r=>{r['_s']='A';ST.fudo.orders.push(r);});
             } else if(sn==='Pagos'){
               const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-              rows.filter(r=>r['Cancelado']==='No').forEach(r=>ST.fudo.pagosRaw.push(r));
+              rows.filter(r=>String(r['Cancelado']).trim()==='No').forEach(r=>ST.fudo.pagosRaw.push(r));
             } else if(sn==='Descuentos'){
               const rows=XLSX.utils.sheet_to_json(ws,{defval:''});
-              rows.filter(r=>r['Cancelado']==='No').forEach(r=>{r['_s']='D';ST.fudo.orders.push(r);});
+              rows.filter(r=>String(r['Cancelado']).trim()==='No').forEach(r=>{r['_s']='D';ST.fudo.orders.push(r);});
             }
           }
           ST.fudo.loaded=true;
@@ -2850,24 +2850,45 @@ async function reimportarVentasFudo(input){
   const st=document.getElementById('fudo-orders-reimport-status');
   st.textContent=`⏳ Leyendo ${files.length} archivo(s)...`;st.style.color='var(--amber)';
   try{
-    // Parsear archivos XLS de Fudo ventas
-    const allOrders=[];
+    // Parsear archivos XLS/XLSX de Fudo ventas
+    const tmpOrders=[];
     for(const file of files){
       const buf=await file.arrayBuffer();
-      const wb=XLSX.read(buf,{type:'array'});
-      // Fudo ventas: buscar hoja con columnas de órdenes
+      const wb=XLSX.read(buf,{type:'array',cellDates:true});
       for(const sname of wb.SheetNames){
         if(/gastos|gasto/i.test(sname))continue;
         const sheet=wb.Sheets[sname];
-        // Intentar distintos offsets de header
-        for(const skip of [3,2,0]){
-          const raw=XLSX.utils.sheet_to_json(sheet,{defval:'',range:skip});
-          const rows=raw.filter(r=>r['Id']||r['id']||r['Número']||r['Numero']||r['Total']||r['total']);
-          if(rows.length){allOrders.push(...rows);break;}
+        const raw=XLSX.utils.sheet_to_json(sheet,{header:1,defval:''});
+        // Buscar fila header robusta
+        const hi=raw.findIndex(r=>Array.isArray(r)&&r.some(v=>String(v).trim()==='Id')&&r.some(v=>String(v).trim()==='Total')&&r.some(v=>String(v).trim()==='Estado'));
+        if(hi<0)continue;
+        const hdrs=raw[hi].map(h=>String(h).trim());
+        for(let i=hi+1;i<raw.length;i++){
+          const row={};hdrs.forEach((h,j)=>row[h]=raw[i][j]);
+          if(!row['Id']||['Eliminada','Cancelada'].includes(String(row['Estado']).trim()))continue;
+          row['_s']='V';tmpOrders.push(row);
+        }
+        // Descuentos
+        const sd=raw.findIndex(r=>Array.isArray(r)&&r.some(v=>String(v).trim()==='Id. Venta')&&r.some(v=>String(v).trim()==='Valor'));
+        // solo procesamos Ventas aquí, el resto en otras hojas
+        break; // solo primera hoja tipo Ventas
+      }
+      // Adiciones
+      for(const sname of wb.SheetNames){
+        if(sname==='Adiciones'){
+          const rows=XLSX.utils.sheet_to_json(wb.Sheets[sname],{defval:''});
+          rows.filter(r=>String(r['Cancelada']).trim()==='No').forEach(r=>{r['_s']='A';tmpOrders.push(r);});
+        } else if(sname==='Descuentos'){
+          const rows=XLSX.utils.sheet_to_json(wb.Sheets[sname],{defval:''});
+          rows.filter(r=>String(r['Cancelado']).trim()==='No').forEach(r=>{r['_s']='D';tmpOrders.push(r);});
+        } else if(sname==='Pagos'){
+          const rows=XLSX.utils.sheet_to_json(wb.Sheets[sname],{defval:''});
+          rows.filter(r=>String(r['Cancelado']).trim()==='No').forEach(r=>ST.fudo.pagosRaw.push(r));
         }
       }
     }
-    if(!allOrders.length){st.textContent='❌ No se encontraron órdenes en los archivos';st.style.color='var(--red)';return;}
+    const allOrders=tmpOrders;
+    if(!allOrders.filter(o=>o['_s']==='V').length){st.textContent='❌ No se encontraron órdenes en los archivos';st.style.color='var(--red)';return;}
 
     st.textContent=`⏳ Procesando ${allOrders.length} filas...`;
     // Reusar el parser existente de Fudo
