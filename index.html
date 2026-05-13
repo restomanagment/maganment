@@ -591,8 +591,6 @@ tr:hover td{background:var(--surface2);}
       ⚡ VIENDO DATOS FILTRADOS &nbsp;<span id="py-filter-pills"></span>
     </div>
 
-    <div class="slabel anim d1">RESUMEN PEDIDOSYA</div>
-    <div class="kpi-grid anim d1" id="py-kpis"></div>
 
     <div class="slabel anim d2">LIQUIDACIÓN PY</div>
     <div class="py-liquidacion anim d2" id="py-liquidacion"></div>
@@ -2002,10 +2000,25 @@ function renderPY(){
   const rows=getPYRows();
   const br=rows.reduce((s,r)=>s+num(nc(r,'Monto bruto de la venta')),0);
   const dL=rows.reduce((s,r)=>s+num(nc(r,'Descuento otorgado por el local')),0);
-  const ne=br-dL; // NETA = BRUTA - DESCUENTO LOCAL
+  const ne=br-dL;
   const co=rows.reduce((s,r)=>s+num(nc(r,'Servicio Ventas PedidoYa ($)','Servicio Ventas PedidosYa ($)')),0);
-  const re=ST.py.reintegros.reduce((s,r)=>s+num(nc(r,'Monto neto a reintegrar')),0);
-  const ca=ST.py.cargos.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
+  // Filtrar reintegros y cargos por el mismo rango de fecha que rows
+  function pyFilterDate(arr){
+    if(!ST.filter.py.dateFrom&&!ST.filter.py.dateTo)return arr;
+    return arr.filter(r=>{
+      const d=nc(r,'Fecha del pedido');if(!d)return false;
+      const s=String(d).trim();
+      let dt=s.includes('-')?new Date(s.split(' ')[0]+'T00:00:00Z'):s.includes('/')?new Date(...s.split('/').reverse().map((v,i)=>i===1?v-1:v)):new Date(s);
+      if(isNaN(dt))return false;
+      if(ST.filter.py.dateFrom&&dt<ST.filter.py.dateFrom)return false;
+      if(ST.filter.py.dateTo){const dtTo=new Date(ST.filter.py.dateTo);dtTo.setHours(23,59,59,999);if(dt>dtTo)return false;}
+      return true;
+    });
+  }
+  const filteredRei=pyFilterDate(ST.py.reintegros);
+  const filteredCar=pyFilterDate(ST.py.cargos);
+  const re=filteredRei.reduce((s,r)=>s+num(nc(r,'Monto neto a reintegrar')),0);
+  const ca=filteredCar.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
 
   // KPIs PY — Nueva lógica con NETA como base
   document.getElementById('py-kpis').innerHTML=[
@@ -2040,9 +2053,9 @@ function renderPY(){
       </div>`).join('');
   }
 
-  // Brands PY — reintegros y cargos por marca
-  const reByBrand={};ST.py.reintegros.forEach(r=>{const bk=bSuc(String(nc(r,'Sucursal')||''));reByBrand[bk]=(reByBrand[bk]||0)+num(nc(r,'Monto neto a reintegrar'));});
-  const caByBrand={};ST.py.cargos.forEach(r=>{const bk=bSuc(String(nc(r,'Sucursal')||''));caByBrand[bk]=(caByBrand[bk]||0)+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios')));});
+  // Brands PY — reintegros y cargos ya filtrados por fecha arriba
+  const reByBrand={};filteredRei.forEach(r=>{const bk=bSuc(String(nc(r,'Sucursal')||''));reByBrand[bk]=(reByBrand[bk]||0)+num(nc(r,'Monto neto a reintegrar'));});
+  const caByBrand={};filteredCar.forEach(r=>{const bk=bSuc(String(nc(r,'Sucursal')||''));caByBrand[bk]=(caByBrand[bk]||0)+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios')));});
 
   const total=br;const bsObj={};
   rows.forEach(r=>{
@@ -2108,10 +2121,10 @@ function renderPY(){
     options:{...CD,indexAxis:'y',plugins:{legend:{display:false}}}});
 
   // Tables — collapsible con resumen por motivo
-  const ca_total=ST.py.cargos.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
+  const ca_total=filteredCar.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
   // Summary por motivo para cargos
   const cargosPorMotivo={};
-  ST.py.cargos.forEach(r=>{
+  filteredCar.forEach(r=>{
     const m=String(nc(r,'Motivo')||'Sin motivo');
     cargosPorMotivo[m]=(cargosPorMotivo[m]||0)+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios')));
   });
@@ -2120,7 +2133,7 @@ function renderPY(){
     Object.entries(cargosPorMotivo).sort((a,b)=>b[1]-a[1]).map(([m,v])=>
       `<span class="summary-pill">${m}: ${fmt(v)}</span>`).join('');
 
-  document.getElementById('py-carg-body').innerHTML=ST.py.cargos.sort((a,b)=>String(nc(b,'Fecha del pedido')||'').localeCompare(String(nc(a,'Fecha del pedido')||''))).map(r=>{
+  document.getElementById('py-carg-body').innerHTML=filteredCar.slice().sort((a,b)=>String(nc(b,'Fecha del pedido')||'').localeCompare(String(nc(a,'Fecha del pedido')||''))).map(r=>{
     const b=BRANDS[bSuc(String(nc(r,'Sucursal')||''))]||BRANDS.compartido;
     const cargo=num(nc(r,'Cargos por reclamos de los usuarios'));
     return `<tr><td class="td-brand" style="color:${b.color}">${b.label}</td><td>${nc(r,'Fecha del pedido')||''}</td><td><span class="pill pill-red">${nc(r,'Motivo')||''}</span></td><td>${fmtF(num(nc(r,'Monto del Pedido')))}</td><td>${fmtF(num(nc(r,'Reintegro al usuario por reclamo')))}</td><td class="td-neg">${fmtF(cargo)}</td></tr>`;
