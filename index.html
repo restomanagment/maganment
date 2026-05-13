@@ -372,11 +372,12 @@ tr:hover td{background:var(--surface2);}
 .flatpickr-calendar{background:#1A191E;border:1px solid #2E2D33;box-shadow:0 8px 32px rgba(0,0,0,0.5);border-radius:12px;font-family:'DM Mono',monospace;}
 .flatpickr-months{padding:8px 0 4px;}
 .flatpickr-month{background:transparent;color:#EEEDF0;}
-.flatpickr-current-month{font-size:13px;font-weight:600;color:#EEEDF0;}
-.flatpickr-current-month .flatpickr-monthDropdown-months{background:#1A191E;color:#EEEDF0;}
+.flatpickr-current-month{font-size:15px;font-weight:800;color:#EEEDF0;}
+.flatpickr-current-month .flatpickr-monthDropdown-months{background:#1A191E;color:#EEEDF0;font-weight:800;font-size:15px;}
 .flatpickr-current-month .flatpickr-monthDropdown-months option{background:#1A191E;color:#EEEDF0;}
-.flatpickr-weekday{color:#7E7D87;font-size:9px;letter-spacing:0.1em;}
-.flatpickr-day{color:#EEEDF0;border-radius:6px;font-size:11px;}
+.flatpickr-current-month input.cur-year{font-weight:800;font-size:15px;color:#EEEDF0;}
+.flatpickr-weekday{color:#AEADB5;font-size:10px;letter-spacing:0.1em;font-weight:600;}
+.flatpickr-day{color:#EEEDF0;border-radius:6px;font-size:12px;font-weight:500;}
 .flatpickr-day:hover{background:#2E2D33;border-color:#2E2D33;color:#EEEDF0;}
 .flatpickr-day.today{border-color:#E8003D;color:#EEEDF0;}
 .flatpickr-day.selected,.flatpickr-day.startRange,.flatpickr-day.endRange{background:#E8003D;border-color:#E8003D;color:#fff;}
@@ -2315,7 +2316,7 @@ function renderPL(){
   const getCanal=o=>o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio');
   const fBruto=fOrders.reduce((s,o)=>s+o.total,0);
   const fDesc=fOrders.filter(o=>getCanal(o)==='propio').reduce((s,o)=>s+o.desc,0);
-  const fNeta=fBruto; // precio cobrado = ventas netas de cara al negocio
+  const fNeta=fBruto-fDesc;
   const fOrdenesPY=fOrders.filter(o=>o.canal==='py');
   const fBrutoPY=fOrdenesPY.reduce((s,o)=>s+o.total,0);
 
@@ -2356,9 +2357,8 @@ function renderPL(){
   };
 
   let html='<div class="eerr">';
-  html+=mkRow('','Ventas Brutas',hasFudo?fBruto:null,null,'','Fudo — todos los canales');
-  html+=mkRow('−','Descuentos aplicados',hasFudo?-fDesc:null,fBruto,'');
-  html+=mkRow('=','VENTAS NETAS',hasFudo?fNeta:null,fBruto,'subtotal','base para márgenes');
+  html+=mkRow('','Ventas Brutas',hasFudo?fBruto:null,null,'','Fudo — todos los canales · precio cobrado');
+  html+=mkRow('=','VENTAS NETAS',hasFudo?fBruto:null,fBruto,'subtotal','base para márgenes');
   html+=`<div class="eerr-row separator"></div>`;
   html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNeta,'','sobre ventas canal PY');
   html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNeta,'');
@@ -2383,10 +2383,10 @@ function renderPL(){
   // ── KPIs ──
   const margenPct=fBruto?resultado/fBruto*100:0;
   (document.getElementById('pl-kpis')||{set innerHTML(v){}} ).innerHTML=[
-    {l:'RESULTADO OPERATIVO',v:hasFudo?fmt(resultado):'sin datos',s:fBruto?margenPct.toFixed(1)+'% s/bruto':'',a:resultado>=0?'var(--green)':'var(--red)'},
     {l:'NETO REAL',v:hasFudo?fmt(netoReal):'sin datos',s:fBruto?pct(netoReal,fBruto)+' del bruto':'',a:'var(--purple)'},
     {l:'COSTO REAL PY',v:hasPY?fmt(costoRealPY):'sin datos',s:fNeta?pct(costoRealPY,fNeta)+' del neto':'',a:'var(--red)'},
     {l:'GASTOS FUDO',v:gastos?fmt(gastos):'pendiente',s:gastosFiltrados.length?`${gastosFiltrados.length} registros`:'',a:'var(--amber)'},
+    {l:'RESULTADO OPERATIVO',v:hasFudo?fmt(resultado):'sin datos',s:fBruto?margenPct.toFixed(1)+'% s/bruto':'',a:resultado>=0?'var(--green)':'var(--red)'},
   ].map(k=>`<div class="kpi" style="--accent:${k.a}"><div class="kpi-label">${k.l}</div><div class="kpi-value">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
 
   // ── CHART GASTOS POR CATEGORÍA ──
