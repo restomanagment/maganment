@@ -2357,7 +2357,8 @@ function renderPL(){
 
   let html='<div class="eerr">';
   html+=mkRow('','Ventas Brutas',hasFudo?fBruto:null,null,'','Fudo — todos los canales · precio cobrado');
-  html+=mkRow('=','VENTAS NETAS',hasFudo?fBruto:null,fBruto,'subtotal','base para márgenes');
+  html+=mkRow('−','Descuentos canal propio',hasFudo&&fDesc?-fDesc:null,fBruto,'','aplicados en local');
+  html+=mkRow('=','VENTAS NETAS',hasFudo?fNeta:null,fBruto,'subtotal','base para márgenes');
   html+=`<div class="eerr-row separator"></div>`;
   html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNeta,'','sobre ventas canal PY');
   html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNeta,'');
