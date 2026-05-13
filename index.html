@@ -1805,10 +1805,7 @@ function renderAlerts(){
 
   if(c.depPct>THRESHOLDS.depPY)
     alerts.push({type:'red',msg:`Dependencia PY: ${c.depPct.toFixed(0)}% — riesgo alto (umbral: ${THRESHOLDS.depPY}%)`});
-  if(c.costoRealPct>THRESHOLDS.costoReal)
-    alerts.push({type:'amber',msg:`Costo real PY: ${c.costoRealPct.toFixed(1)}% del bruto (umbral: ${THRESHOLDS.costoReal}%)`});
-  if(c.tasaReclamos>THRESHOLDS.reclamos)
-    alerts.push({type:'amber',msg:`Tasa reclamos: ${c.tasaReclamos.toFixed(1)}% de pedidos (umbral: ${THRESHOLDS.reclamos}%)`});
+
   if(c.pyBruto&&c.pyDescLocal/c.pyBruto*100>THRESHOLDS.descuentos)
     alerts.push({type:'amber',msg:`Descuentos: ${(c.pyDescLocal/c.pyBruto*100).toFixed(1)}% del bruto (umbral: ${THRESHOLDS.descuentos}%)`});
   if(!alerts.length)
