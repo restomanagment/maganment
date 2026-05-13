@@ -2292,9 +2292,10 @@ function filterGastosByPeriod(gastos){
   const{from,to}=getCRDateRange();
   if(!from)return gastos;
   return gastos.filter(g=>{
-    const f=g['Fecha']||'';
-    const d=new Date(f);
-    if(isNaN(d))return false;
+    const mesKey=getMesKey(g);
+    if(!mesKey||mesKey==='Sin fecha')return false;
+    const[y,m]=mesKey.split('-').map(Number);
+    const d=new Date(y,m-1,15);
     return d>=from&&d<=to;
   });
 }
