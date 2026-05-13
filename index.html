@@ -2270,7 +2270,7 @@ function filterFudoByPeriod(orders){
   if(!from)return orders;
   return orders.filter(o=>{
     if(!o.fecha)return false;
-    const dt=new Date(String(o.fecha).split(' ')[0]+'T00:00:00Z');
+    const dt=new Date(o.fecha);
     if(isNaN(dt))return false;
     return dt>=from&&dt<=to;
   });
