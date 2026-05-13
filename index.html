@@ -2315,8 +2315,10 @@ function renderPL(){
   // ── DATOS PY (fuente de comisiones/cargos/reintegros) ──
   const pyVF=filterPYByPeriod(ST.py.ventas);
   const pyComision=pyVF.reduce((s,r)=>s+num(nc(r,'Servicio Ventas PedidoYa ($)','Servicio Ventas PedidosYa ($)')),0);
-  const pyReclamos=ST.py.cargos.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
-  const pyReintegros=ST.py.reintegros.reduce((s,r)=>s+num(nc(r,'Monto neto a reintegrar')),0);
+  const pyReclamosFilt=filterPYByPeriod(ST.py.cargos);
+  const pyReintegrosFilt=filterPYByPeriod(ST.py.reintegros);
+  const pyReclamos=pyReclamosFilt.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
+  const pyReintegros=pyReintegrosFilt.reduce((s,r)=>s+num(nc(r,'Monto neto a reintegrar')),0);
 
   // ── GASTOS FUDO ──
   const gastosFiltrados=filterGastosByPeriod(ST.fudo.gastos);
