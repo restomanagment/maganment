@@ -2152,7 +2152,7 @@ function renderPY(){
 // ══════════════════════════════════════════════════════
 // CANAL PROPIO
 // ══════════════════════════════════════════════════════
-function renderCanal(){
+function renderCanal(){if(!document.getElementById('canal-kpis'))return;
   const c=ST.computed;
   const propio=ST.fudo.enriched.filter(o=>o.canal==='propio');
   const total=ST.fudo.enriched.reduce((s,o)=>s+o.total,0);
