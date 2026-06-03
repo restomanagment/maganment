@@ -1515,6 +1515,9 @@ const COL_MAP = {
   // PedidosYa CSV (portal de ventas)
   'nombre del local':                   'Sucursal',
   'nro de pedido':                      'Numero de Pedido',
+  // PedidosYa CSV (orderDetails export)
+  'total parcial':                      'Monto bruto de la venta',
+  'descuento financiado por usted':     'Descuento otorgado por el local',
   'total del pedido':                   'Monto bruto de la venta',
   'ingreso estimado':                   'Monto neto de la Venta ($)',
   'comisión':                           'Servicio Ventas PedidoYa ($)',
@@ -1745,7 +1748,13 @@ function computeGlobals(){
   const pyComision=pyV.reduce((s,r)=>s+num(nc(r,'Servicio Ventas PedidoYa ($)','Servicio Ventas PedidosYa ($)')),0);
   const pyReclamos=ST.py.cargos.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
   const pyReintegros=ST.py.reintegros.reduce((s,r)=>s+num(nc(r,'Monto neto a reintegrar')),0);
-  const pyNeto=pyNetoPostDesc-pyComision+pyReintegros-pyReclamos;
+  // NETA = Ingreso estimado (lo que PY deposita, ya neto de comisión+impuestos+fees). Fallback: reconstrucción para datos legacy.
+  const pyNetoVentas=pyV.reduce((s,r)=>{
+    const ie=num(nc(r,'Monto neto de la Venta ($)','Ingreso estimado'));
+    if(ie)return s+ie;
+    return s+(num(nc(r,'Monto bruto de la venta'))-num(nc(r,'Descuento otorgado por el local'))-num(nc(r,'Servicio Ventas PedidoYa ($)','Servicio Ventas PedidosYa ($)')));
+  },0);
+  const pyNeto=pyNetoVentas+pyReintegros-pyReclamos;
 
   const fBruto=fV.reduce((s,o)=>s+o.total,0);
   const fNeto=fV.reduce((s,o)=>s+o.neto,0);
