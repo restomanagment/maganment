@@ -2681,7 +2681,7 @@ async function reimportarPYAuto(input){
     let rows=[];
     if(file.name.endsWith('.csv')){
       const text=new TextDecoder('utf-8').decode(buf);
-      rows=parseCSVtoJSON(text);
+      rows=parseCSV(text);
     } else {
       const wb=XLSX.read(buf,{type:'array'});
       for(const sname of wb.SheetNames){
@@ -2781,7 +2781,7 @@ async function reimportarPY(input,tipo){
       let rows=[];
       if(file.name.endsWith('.csv')){
         const text=new TextDecoder('utf-8').decode(buf);
-        rows=parseCSVtoJSON(text);
+        rows=parseCSV(text);
       } else {
         const wb=XLSX.read(buf,{type:'array'});
         for(const sname of wb.SheetNames){
