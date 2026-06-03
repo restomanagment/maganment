@@ -1100,14 +1100,7 @@ async function saveToSupabase(){
   toast.textContent='💾 Guardando en Supabase...';
   toast.classList.add('show');
   try{
-    // Limpiar tablas antes de insertar para evitar duplicados
-    await Promise.all([
-      sb.from('py_ventas').delete().neq('id',0),
-      sb.from('py_reintegros').delete().neq('id',0),
-      sb.from('py_cargos').delete().neq('id',0),
-      sb.from('fudo_orders').delete().neq('id',0),
-      sb.from('fudo_gastos').delete().neq('id',0),
-    ]);
+    // Upsert idempotente (batchUpsert usa onConflict) — no hace falta borrar
     toast.textContent='💾 Insertando datos...';
     // PY Ventas
     if(ST.py.ventas.length){
@@ -1702,6 +1695,7 @@ function buildDashboard(){
       `PY ${ST.py.ventas.length} · Fudo ${ST.fudo.enriched.length}`;
 
     renderAll();
+    if(ST.py.loaded||ST.fudo.loaded||ST.galicia.loaded)saveToSupabase();
   },300);
 }
 
