@@ -53,7 +53,22 @@ header{display:flex;align-items:center;justify-content:space-between;padding:0 2
 .header-right{display:flex;align-items:center;gap:10px;}
 #period-label{font-size:9px;color:var(--muted);letter-spacing:0.06em;background:var(--surface2);padding:4px 10px;border-radius:20px;border:1px solid var(--border);}
 
-/* ── DROP SCREEN ── */
+/* ── SIDEBAR ── */
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:212px;flex-direction:column;gap:2px;padding:16px 12px;border-right:1px solid var(--border);background:rgba(2,6,23,0.97);backdrop-filter:blur(20px);z-index:300;overflow-y:auto;}
+.sidebar .sb-brand{display:flex;align-items:center;gap:10px;padding:2px 6px 14px;border-bottom:1px solid var(--border);margin-bottom:6px;}
+.sidebar .sb-brand #period-label{font-size:9px;color:var(--muted);}
+.sidebar .sb-section{font-size:8px;letter-spacing:0.12em;color:var(--muted);padding:14px 8px 4px;font-family:'DM Mono',monospace;}
+.sidebar .nav-tab{width:100%;justify-content:flex-start;font-size:11px;padding:8px 12px;}
+.sidebar .sb-footer{margin-top:auto;padding-top:12px;border-top:1px solid var(--border);font-size:9px;color:var(--muted);}
+/* correr el contenido a la derecha de la sidebar */
+#dashboard{padding-left:212px;}
+@media(max-width:900px){
+  .sidebar{position:static;width:auto;flex-direction:row;flex-wrap:wrap;border-right:none;border-bottom:1px solid var(--border);}
+  .sidebar .sb-brand,.sidebar .sb-section,.sidebar .sb-footer{display:none;}
+  .sidebar .nav-tab{width:auto;}
+  #dashboard{padding-left:0;}
+}
+
 #drop-section{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 58px);padding:40px;gap:32px;background:radial-gradient(ellipse at 50% 0%,rgba(59,130,246,0.06) 0%,transparent 60%);}
 .drop-headline{text-align:center;}
 .drop-headline h1{font-family:'Syne',sans-serif;font-size:28px;font-weight:800;letter-spacing:-0.5px;margin-bottom:8px;}
@@ -105,7 +120,7 @@ input[type=file]{display:none;}
 
 /* ── DASHBOARD ── */
 #dashboard{display:none;}
-.module{display:none;padding:24px 28px 60px;}
+.module{display:none;padding:24px 28px 60px;max-width:1200px;margin:0 auto;}
 .module.active{display:block;}
 
 /* ── ALERTS BAR ── */
@@ -395,31 +410,41 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
 </head>
 <body>
 
-<header>
-  <div class="logo">
+<aside class="sidebar" id="header-tabs" style="display:none">
+  <div class="sb-brand">
     <div class="logo-mark">BI</div>
     <div>
       <div class="logo-text">Centro de <span>Control</span></div>
       <div id="period-label">Sin datos · cargá archivos para comenzar</div>
     </div>
   </div>
-  <div class="header-center" id="header-tabs" style="display:none">
-    <button class="nav-tab active" onclick="switchTab('control',this)">
-      <div class="tab-dot"></div> Control Room
-      <span class="alert-badge" id="alert-count" style="display:none">0</span>
-    </button>
-    <button class="nav-tab" onclick="switchTab('py',this)"><div class="tab-dot"></div> PedidosYa</button>
-    <button class="nav-tab" onclick="switchTab('fudo',this)"><div class="tab-dot"></div> Fudo Ops</button>
-    <button class="nav-tab" onclick="switchTab('egresos',this)"><div class="tab-dot"></div> Egresos</button>
-    
-    <button class="nav-tab" onclick="switchTab('tesoreria',this)"><div class="tab-dot"></div> Tesorería</button>
-    <button class="nav-tab" onclick="switchTab('marcas',this)"><div class="tab-dot"></div> Marcas</button>
-    <button class="nav-tab" onclick="switchTab('importar',this)" style="margin-left:auto;border:1px solid var(--border2)"><div class="tab-dot"></div> ↑ Importar</button>
+
+  <div class="sb-section">RESUMEN</div>
+  <button class="nav-tab active" onclick="switchTab('control',this)">
+    <div class="tab-dot"></div> Control Room
+    <span class="alert-badge" id="alert-count" style="display:none">0</span>
+  </button>
+
+  <div class="sb-section">VENTAS POR CANAL</div>
+  <button class="nav-tab" onclick="switchTab('py',this)"><div class="tab-dot"></div> PedidosYa</button>
+  <button class="nav-tab" onclick="switchTab('fudo',this)"><div class="tab-dot"></div> Fudo Ops</button>
+  <button class="nav-tab" onclick="switchTab('canal',this)"><div class="tab-dot"></div> Canal Propio</button>
+
+  <div class="sb-section">FINANZAS</div>
+  <button class="nav-tab" onclick="switchTab('egresos',this)"><div class="tab-dot"></div> Egresos</button>
+  <button class="nav-tab" onclick="switchTab('tesoreria',this)"><div class="tab-dot"></div> Tesorería</button>
+
+  <div class="sb-section">ANÁLISIS</div>
+  <button class="nav-tab" onclick="switchTab('marcas',this)"><div class="tab-dot"></div> Marcas</button>
+
+  <div class="sb-section">DATOS</div>
+  <button class="nav-tab" onclick="switchTab('importar',this)"><div class="tab-dot"></div> ↑ Importar</button>
+
+  <div class="sb-footer">
+    <div id="file-count" style="display:none"></div>
   </div>
-  <div class="header-right">
-    <div id="file-count" style="font-size:9px;color:var(--muted);display:none"></div>
-  </div>
-</header>
+</aside>
+
 
 <!-- ══════════════ DROP ══════════════ -->
 <div id="drop-section">
