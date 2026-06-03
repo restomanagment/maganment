@@ -716,6 +716,7 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
       <div style="font-size:11px;color:var(--muted);line-height:1.7">Cargá archivos de cualquier plataforma. El sistema detecta el formato automáticamente y actualiza todos los módulos.</div>
     </div>
 
+    <div style="max-width:920px;margin:0 auto;">
     <!-- PEDIDOSYA -->
     <div class="slabel anim d1">PEDIDOSYA</div>
     <div class="anim d1" style="background:var(--surface);border:1px solid rgba(232,0,61,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
@@ -851,39 +852,31 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
       <div style="font-size:9px;color:var(--muted);margin-top:10px" id="fudo-auto-status"></div>
     </div>
 
-    <!-- PRÓXIMAMENTE -->
-    <div class="slabel anim d3">PRÓXIMAMENTE</div>
-    <div class="anim d3" style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px;">
-      <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;opacity:0.45">
-        <div style="font-size:16px;margin-bottom:8px">🛵</div>
-        <div style="font-size:11px;font-weight:600;margin-bottom:4px">Rappi</div>
-        <div style="font-size:8px;color:var(--muted);letter-spacing:0.1em">PRÓXIMAMENTE</div>
+    <!-- GALICIA -->
+    <div class="slabel anim d3">GALICIA</div>
+    <div class="anim d3" style="background:var(--surface);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:20px;margin-bottom:16px;">
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;">
+        <div style="width:36px;height:36px;border-radius:8px;background:var(--green-dim);border:1px solid rgba(16,185,129,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🏦</div>
+        <div style="flex:1">
+          <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;">Galicia — Extracto bancario</div>
+          <div style="font-size:9px;color:var(--muted)">Acepta: extracto .pdf · .txt · movimientos, créditos y débitos</div>
+        </div>
       </div>
-      <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;opacity:0.45">
-        <div style="font-size:16px;margin-bottom:8px">📦</div>
-        <div style="font-size:11px;font-weight:600;margin-bottom:4px">MercadoLibre</div>
-        <div style="font-size:8px;color:var(--muted);letter-spacing:0.1em">PRÓXIMAMENTE</div>
+      <div style="text-align:center;margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border);">
+        <label style="display:inline-block;padding:13px 36px;border-radius:9px;background:var(--green);color:#fff;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer;transition:all 0.2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
+          📂 &nbsp;CARGAR EXTRACTO GALICIA
+          <input type="file" accept=".pdf,.txt" multiple style="display:none" onchange="handleGalicia(this.files,'galicia-import-status')">
+        </label>
+        <div style="font-size:9px;color:var(--muted);margin-top:8px" id="galicia-import-status"></div>
       </div>
-      <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;opacity:0.45">
-        <div style="font-size:16px;margin-bottom:8px">🚀</div>
-        <div style="font-size:11px;font-weight:600;margin-bottom:4px">Glovo</div>
-        <div style="font-size:8px;color:var(--muted);letter-spacing:0.1em">PRÓXIMAMENTE</div>
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:14px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div style="font-size:9px;color:var(--muted);letter-spacing:0.1em;margin-bottom:6px;">MOVIMIENTOS</div>
+          <div style="font-family:'Syne',sans-serif;font-size:13px;font-weight:700;color:var(--green);" id="galicia-count-label">—</div>
+        </div>
+        <button onclick="borrarGalicia()" style="padding:8px 14px;border-radius:6px;background:var(--red-dim);border:1px solid rgba(232,0,61,0.3);color:var(--red);font-size:9px;cursor:pointer;font-family:'DM Mono',monospace">🗑 Borrar todo</button>
       </div>
-      <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;opacity:0.45">
-        <div style="font-size:16px;margin-bottom:8px">🏦</div>
-        <div style="font-size:11px;font-weight:600;margin-bottom:4px">Galicia (extracto)</div>
-        <div style="font-size:8px;color:var(--muted);letter-spacing:0.1em">PRÓXIMAMENTE</div>
-      </div>
-      <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;opacity:0.45">
-        <div style="font-size:16px;margin-bottom:8px">💳</div>
-        <div style="font-size:11px;font-weight:600;margin-bottom:4px">MercadoPago</div>
-        <div style="font-size:8px;color:var(--muted);letter-spacing:0.1em">PRÓXIMAMENTE</div>
-      </div>
-      <div style="background:var(--surface);border:1px dashed var(--border);border-radius:10px;padding:20px;text-align:center;opacity:0.45">
-        <div style="font-size:16px;margin-bottom:8px">📊</div>
-        <div style="font-size:11px;font-weight:600;margin-bottom:4px">ARCA / AFIP</div>
-        <div style="font-size:8px;color:var(--muted);letter-spacing:0.1em">PRÓXIMAMENTE</div>
-      </div>
+    </div>
     </div>
   </div>
 
@@ -1604,10 +1597,10 @@ function parseCSVLine(line){
 }
 
 // HANDLER PARA GALICIA
-async function handleGalicia(files){
+async function handleGalicia(files,statusId){
   const archivos=Array.from(files).filter(f=>f.name.match(/\.(pdf|txt)$/i));
   if(!archivos.length)return;
-  const st=document.getElementById('st-galicia');
+  const st=document.getElementById(statusId||'st-galicia');
   st.className='dz-status loading';st.textContent=`⏳ Leyendo extracto...`;
 
   for(const f of archivos){
@@ -1631,6 +1624,10 @@ async function handleGalicia(files){
   st.className='dz-status ok';
   st.textContent=`✓ Extracto procesado`;
   ST.galicia.loaded=true;
+  if(typeof computeGlobals==='function')computeGlobals();
+  if(typeof renderAll==='function')renderAll();
+  const cl=document.getElementById('galicia-count-label');
+  if(cl)cl.textContent=(ST.galicia.movimientos?ST.galicia.movimientos.length:0)+' movimientos';
   if(ST.py.loaded||ST.fudo.loaded||ST.galicia.loaded)document.getElementById('launch-btn').classList.add('ready');
 }
 
@@ -2773,6 +2770,15 @@ async function borrarPY(tipo){
     st.textContent=`✓ ${tipo} borrados`;st.style.color='var(--green)';
     updatePYCountLabels();
   }catch(e){st.textContent='❌ '+e.message;st.style.color='var(--red)';}
+}
+
+function borrarGalicia(){
+  if(!confirm('¿Borrar todos los movimientos de Galicia cargados en memoria?'))return;
+  ST.galicia={movimientos:[],creditos:[],debitos:[],porMes:{},loaded:false};
+  if(typeof computeGlobals==='function')computeGlobals();
+  if(typeof renderAll==='function')renderAll();
+  const cl=document.getElementById('galicia-count-label');if(cl)cl.textContent='—';
+  const st=document.getElementById('galicia-import-status');if(st)st.textContent='✓ Galicia borrada (memoria)';
 }
 
 async function reimportarPY(input,tipo){
