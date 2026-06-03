@@ -2693,11 +2693,16 @@ async function reimportarPYAuto(input){
       }
     }
     if(!rows.length){resultados.push(`❌ ${file.name}: sin datos`);continue;}
-    // Detectar tipo por columnas
+    // Detectar tipo por columnas (ventas gana si tiene columnas de ventas, aunque traiga "cargos"/"reclamo" inline)
     const cols=Object.keys(rows[0]).join('|').toLowerCase();
     let tipo='ventas';
-    if(cols.includes('reintegro')||cols.includes('monto neto a reintegrar'))tipo='reintegros';
-    else if(cols.includes('cargo')||cols.includes('reclamo')||cols.includes('cargos por reclamos'))tipo='cargos';
+    if(cols.includes('monto neto a reintegrar')||cols.includes('tipo de reintegro')){
+      tipo='reintegros';
+    } else if(cols.includes('ingreso estimado')||cols.includes('comisión')||cols.includes('monto bruto')){
+      tipo='ventas';
+    } else if(cols.includes('cargos por reclamos')||cols.includes('motivo del reclamo')){
+      tipo='cargos';
+    }
     // Reusar reimportarPY con rows ya parseados
     await _procesarPYRows(rows,tipo,`py-${tipo}-status`);
     resultados.push(`✓ ${file.name} → ${tipo} (${rows.length} filas)`);
