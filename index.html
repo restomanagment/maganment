@@ -1189,7 +1189,9 @@ async function saveToSupabase(){
         origen: o.origen,
         total: o.total,
         neto: o.neto,
-        descuento: o.desc
+        bruto: o.bruto??(o.total+o.desc),
+        descuento: o.desc,
+        id_origen: o.idOrigen||null
       }));
       await batchUpsert('fudo_orders', rows, 'fudo_id');
     }
@@ -1250,7 +1252,7 @@ async function loadFromSupabase(){
     if(pyC.length){ST.py.cargos=pyC.map(r=>r.raw);}
     if(fudoO.length){
       ST.fudo.enriched=fudoO.map(o=>({
-        id:o.fudo_id.split('_')[0], total:o.total, neto:o.neto, desc:o.descuento,
+        id:o.fudo_id.split('_')[0], total:o.total, neto:o.neto, bruto:o.bruto??(o.total+o.descuento), desc:o.descuento, idOrigen:o.id_origen,
         mes:o.mes, hora:o.hora, brand:o.brand, canal:o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio'), origen:o.origen,
         fecha:o.fecha?new Date(o.fecha):null
       }));
@@ -1752,7 +1754,8 @@ function processFudo(){
     const brand=brandMap[id]||'compartido';
     const desc=descMap[id]||0;
     const canal=String(v['Origen']||'').toLowerCase().includes('pedidos')?'py':'propio';
-    return{id,total,neto:total-desc,desc,mes,hora,brand,canal,origen:v['Origen'],fecha:dateObj};
+    const idOrigen=parseInt(String(v['Id. Origen']||'').replace(/\D/g,''))||null;
+    return{id,bruto:total+desc,neto:total,desc,total,mes,hora,brand,canal,origen:v['Origen'],idOrigen,fecha:dateObj};
   });
 }
 
@@ -1778,10 +1781,10 @@ function computeGlobals(){
   },0);
   const pyNeto=pyNetoVentas+pyReintegros-pyReclamos;
 
-  const fBruto=fV.reduce((s,o)=>s+o.total,0);
-  const fNeto=fV.reduce((s,o)=>s+o.neto,0);
+  const fBruto=fV.reduce((s,o)=>s+(o.bruto??o.total),0);   // lista = total+desc
+  const fNeto=fV.reduce((s,o)=>s+o.neto,0);                 // cobrado = total
   const fDesc=fV.reduce((s,o)=>s+o.desc,0);
-  const fPropio=fV.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.total,0);
+  const fPropio=fV.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.neto,0); // cobrado propio
   const fGastos=ST.fudo.gastos.reduce((s,g)=>s+num(g['Importe']),0);
 
   // Dependencia (sobre NETO Fudo)
@@ -1935,7 +1938,7 @@ function renderControlRoom(){
   const bs={};
   fV.forEach(o=>{
     if(!bs[o.brand])bs[o.brand]={...BRANDS[o.brand]||BRANDS.compartido,p:0,br:0,ne:0,de:0};
-    bs[o.brand].p++;bs[o.brand].br+=o.total;bs[o.brand].ne+=o.neto;bs[o.brand].de+=o.desc;
+    bs[o.brand].p++;bs[o.brand].br+=o.bruto;bs[o.brand].ne+=o.neto;bs[o.brand].de+=o.desc;
   });
   if(!Object.keys(bs).length){
     const pyBs={};
@@ -1982,7 +1985,7 @@ function renderControlRoom(){
 
   // ── TIMELINE ──
   const byM={};
-  ST.fudo.enriched.forEach(o=>{if(!o.mes||o.mes==='?')return;if(!byM[o.mes])byM[o.mes]={br:0,ne:0};byM[o.mes].br+=o.total;byM[o.mes].ne+=o.neto;});
+  ST.fudo.enriched.forEach(o=>{if(!o.mes||o.mes==='?')return;if(!byM[o.mes])byM[o.mes]={br:0,ne:0};byM[o.mes].br+=o.bruto;byM[o.mes].ne+=o.neto;});
   ST.py.ventas.forEach(r=>{
     const d=nc(r,'Fecha de Pedido','Fecha del pedido');if(!d)return;
     let dt=d instanceof Date?d:new Date(String(d).split('/').reverse().join('-'));if(isNaN(dt))return;
@@ -2340,7 +2343,7 @@ function renderPL(){
   // fBruto = precio real cobrado al cliente (o.total ya refleja precio con descuentos aplicados)
   // No reconstruimos el precio de lista porque canal PY puede tener canal=null en Supabase
   const getCanal=o=>o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio');
-  const fBruto=fOrders.reduce((s,o)=>s+o.total,0);
+  const fBruto=fOrders.reduce((s,o)=>s+(o.bruto??o.total),0);  // lista
   const fDesc=fOrders.filter(o=>getCanal(o)==='propio').reduce((s,o)=>s+o.desc,0);
   const fNeta=fBruto-fDesc;
   const fOrdenesPY=fOrders.filter(o=>o.canal==='py');
@@ -2383,25 +2386,27 @@ function renderPL(){
   };
 
   let html='<div class="eerr">';
-  html+=mkRow('','Ventas Brutas',hasFudo?fBruto:null,null,'','Fudo — todos los canales · precio cobrado');
-  html+=mkRow('=','VENTAS NETAS',hasFudo?fBruto:null,fBruto,'subtotal','base para márgenes');
+  const fNetoCobrado=fOrders.reduce((s,o)=>s+o.neto,0);   // cobrado = total
+  html+=mkRow('','Ventas Brutas (lista)',hasFudo?fBruto:null,null,'','Fudo — precio de lista, todos los canales');
+  html+=mkRow('−','Descuentos',hasFudo?-fDesc:null,fBruto,'','promo aplicada');
+  html+=mkRow('=','VENTAS NETAS (cobrado)',hasFudo?fNetoCobrado:null,fBruto,'subtotal','lo efectivamente cobrado');
   html+=`<div class="eerr-row separator"></div>`;
-  html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNeta,'','sobre ventas canal PY');
-  html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNeta,'');
-  html+=mkRow('+','Reintegros recibidos',hasPY?pyReintegros:null,fNeta,'');
-  html+=mkRow('=','NETO REAL',hasFudo||hasPY?netoReal:null,fBruto,'subtotal','');
+  html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNetoCobrado,'','sobre ventas canal PY');
+  html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNetoCobrado,'');
+  html+=mkRow('+','Reintegros recibidos',hasPY?pyReintegros:null,fNetoCobrado,'');
+  html+=mkRow('=','NETO REAL',hasFudo||hasPY?netoReal:null,fNetoCobrado,'subtotal','');
   html+=`<div class="eerr-row separator"></div>`;
 
   if(gastos>0){
     Object.entries(gC).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{
-      html+=mkRow('−',cat,-val,fBruto,'');
+      html+=mkRow('−',cat,-val,fNetoCobrado,'');
     });
   } else {
     html+=mkRow('−','Gastos operativos (Fudo)',null,null,'','cargá gastos en Fudo');
   }
   html+=`<div class="eerr-row separator"></div>`;
   const resCls=resultado>=0?'total':'total-neg';
-  html+=mkRow('=','RESULTADO OPERATIVO',hasFudo||hasPY?resultado:null,fBruto,resCls,'');
+  html+=mkRow('=','RESULTADO OPERATIVO',hasFudo||hasPY?resultado:null,fNetoCobrado,resCls,'');
   html+='</div>';
 
   (document.getElementById('pl-waterfall')||{set innerHTML(v){}} ).innerHTML=html;
@@ -2466,7 +2471,7 @@ function renderMarcas(){
   fV.forEach(o=>{
     if(o.brand==='compartido')return;
     if(!bs[o.brand])bs[o.brand]={...BRANDS[o.brand],p:0,br:0,ne:0,de:0,py:0,pr:0};
-    bs[o.brand].p++;bs[o.brand].br+=o.total;bs[o.brand].ne+=o.neto;bs[o.brand].de+=o.desc;
+    bs[o.brand].p++;bs[o.brand].br+=o.bruto;bs[o.brand].ne+=o.neto;bs[o.brand].de+=o.desc;
     bs[o.brand][o.canal]+=o.total;
   });
 
@@ -2537,7 +2542,7 @@ function renderMarcas(){
     if(o.brand==='compartido')return;
     const key=`${o.mes}__${o.brand}`;
     if(!sm[key])sm[key]={mes:o.mes,brand:o.brand,p:0,br:0,ne:0,de:0};
-    sm[key].p++;sm[key].br+=o.total;sm[key].ne+=o.neto;sm[key].de+=o.desc;
+    sm[key].p++;sm[key].br+=o.bruto;sm[key].ne+=o.neto;sm[key].de+=o.desc;
   });
   const smRows=Object.values(sm).sort((a,b)=>a.mes.localeCompare(b.mes)||a.brand.localeCompare(b.brand));
   document.getElementById('marcas-sub') && (document.getElementById('marcas-sub').textContent=`${smRows.length} combinaciones`);
@@ -3237,7 +3242,7 @@ function renderFudo(){
   orders.forEach(o=>{
     const bk=o.brand;
     if(!bs[bk])bs[bk]={...BRANDS[bk]||BRANDS.compartido,p:0,br:0,ne:0,de:0};
-    bs[bk].p++;bs[bk].br+=o.total;bs[bk].ne+=o.neto;bs[bk].de+=o.desc;
+    bs[bk].p++;bs[bk].br+=o.bruto;bs[bk].ne+=o.neto;bs[bk].de+=o.desc;
   });
   (document.getElementById('fudo-brands')||{set innerHTML(v){}} ).innerHTML=Object.entries(bs).map(([k,b])=>{
     const pp=vB?(b.br/vB*100).toFixed(1):0;
