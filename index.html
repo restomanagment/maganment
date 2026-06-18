@@ -2489,6 +2489,17 @@ function filterGastosByPeriod(gastos){
   });
 }
 
+function filterLiqByPeriod(liqs){
+  const{from,to}=getCRDateRange();
+  if(!from)return liqs;
+  const pd=s=>{if(!s)return null;const[d,m,y]=String(s).split('/').map(Number);return new Date(y,m-1,d);};
+  return liqs.filter(l=>{
+    const d1=pd(l.desde),d2=pd(l.hasta)||d1;
+    if(!d1)return false;
+    return d1<=to && (d2||d1)>=from; // semana solapa con el período
+  });
+}
+
 // ══════════════════════════════════════════════════════
 // P&L
 // ══════════════════════════════════════════════════════
@@ -2514,6 +2525,19 @@ function renderPL(){
   const pyReclamos=pyReclamosFilt.reduce((s,r)=>s+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios'))),0);
   const pyReintegros=pyReintegrosFilt.reduce((s,r)=>s+num(nc(r,'Monto neto a reintegrar')),0);
 
+  // ── LIQUIDACIÓN REAL PY (estado de cuenta — costo verdadero) ──
+  // Los ítems de costo (servicios, cargos op, publicidad, impuestos/ret) vienen NEGATIVOS del parser.
+  // ventas_fuera_app y credito_py son reconciliación de caja, NO costo de P&L → se excluyen.
+  const liqF=filterLiqByPeriod(ST.py.liquidaciones||[]);
+  const hasLiq=liqF.length>0;
+  const lsum=k=>liqF.reduce((s,l)=>s+(+l[k]||0),0);
+  const liqServicios=Math.abs(lsum('servicios_py'));
+  const liqCargosOp=Math.abs(lsum('cargos_operativos'));
+  const liqPublicidad=Math.abs(lsum('publicidad'));
+  const liqImpuestos=Math.abs(lsum('impuestos_retenciones'));
+  const liqReintegros=lsum('reintegros'); // positivo = crédito a favor
+  const liqCostoPY=liqServicios+liqCargosOp+liqPublicidad+liqImpuestos-liqReintegros;
+
   // ── GASTOS FUDO ──
   const gastosFiltrados=filterGastosByPeriod(ST.fudo.gastos);
   const gastos=gastosFiltrados.reduce((s,g)=>s+num(g['Importe']),0);
@@ -2524,11 +2548,13 @@ function renderPL(){
   });
 
   // ── RESULTADO ──
-  const costoRealPY=pyComision+pyReclamos-pyReintegros;
+  // Si hay liquidación real cargada para el período, usamos el costo PY verdadero (estado de cuenta).
+  // Si no, caemos al estimado por-pedido (comisión + reclamos − reintegros).
+  const costoRealPY=hasLiq?liqCostoPY:(pyComision+pyReclamos-pyReintegros);
   const netoReal=fNeta-costoRealPY;
   const resultado=netoReal-gastos;
   const hasFudo=fBruto>0;
-  const hasPY=pyComision>0||ST.py.ventas.length>0;
+  const hasPY=hasLiq||pyComision>0||ST.py.ventas.length>0;
 
   // ── EERR CASCADA ──
   const mkRow=(op,label,val,refBase,cls='',nota='')=>{
@@ -2547,10 +2573,18 @@ function renderPL(){
   html+=mkRow('−','Descuentos',hasFudo?-fDesc:null,fBruto,'','promo aplicada');
   html+=mkRow('=','VENTAS NETAS',hasFudo?fNeta:null,fBruto,'subtotal','brutas − descuentos');
   html+=`<div class="eerr-row separator"></div>`;
-  html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNeta,'','sobre ventas canal PY');
-  html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNeta,'');
-  html+=mkRow('+','Reintegros recibidos',hasPY?pyReintegros:null,fNeta,'');
-  html+=mkRow('=','NETO REAL',hasFudo||hasPY?netoReal:null,fNeta,'subtotal','');
+  if(hasLiq){
+    html+=mkRow('−','Servicios PedidosYa',-liqServicios,fNeta,'','comisiones — estado de cuenta');
+    html+=mkRow('−','Cargos operativos',-liqCargosOp,fNeta,'');
+    html+=mkRow('−','Publicidad en la app',-liqPublicidad,fNeta,'');
+    html+=mkRow('−','Impuestos y retenciones',-liqImpuestos,fNeta,'');
+    html+=mkRow('+','Reintegros',liqReintegros,fNeta,'');
+  } else {
+    html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNeta,'','sobre ventas canal PY');
+    html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNeta,'');
+    html+=mkRow('+','Reintegros recibidos',hasPY?pyReintegros:null,fNeta,'');
+  }
+  html+=mkRow('=','NETO REAL',hasFudo||hasPY?netoReal:null,fNeta,'subtotal',hasLiq?'costo PY real (liquidación)':'');
   html+=`<div class="eerr-row separator"></div>`;
 
   if(gastos>0){
