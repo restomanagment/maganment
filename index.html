@@ -752,13 +752,13 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
         <div style="width:36px;height:36px;border-radius:8px;background:var(--red-dim);border:1px solid rgba(232,0,61,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0">🛵</div>
         <div style="flex:1">
           <div style="font-family:'Syne',sans-serif;font-size:14px;font-weight:700;">PedidosYa</div>
-          <div style="font-size:9px;color:var(--muted)">Acepta: invoice CSV/XLS · estado-de-cuenta CSV · reintegros XLS · cargos XLS · podés cargar todos juntos</div>
+          <div style="font-size:9px;color:var(--muted)">Acepta: invoice CSV/XLS · estado-de-cuenta.pdf · reintegros XLS · cargos XLS · podés cargar todos juntos</div>
         </div>
       </div>
       <div style="text-align:center;margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border);">
         <label style="display:inline-block;padding:13px 36px;border-radius:9px;background:var(--red);color:#fff;font-family:'Syne',sans-serif;font-size:13px;font-weight:800;cursor:pointer;box-shadow:0 4px 20px var(--red-glow);transition:all 0.2s" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='none'">
           📂 &nbsp;CARGAR ARCHIVOS PY
-          <input type="file" accept=".csv,.xls,.xlsx" multiple style="display:none" onchange="reimportarPYAuto(this)">
+          <input type="file" accept=".csv,.xls,.xlsx,.pdf" multiple style="display:none" onchange="reimportarPYAuto(this)">
         </label>
         <div style="font-size:9px;color:var(--muted);margin-top:8px" id="py-auto-status"></div>
       </div>
@@ -2860,6 +2860,28 @@ async function reimportarPYAuto(input){
   st.textContent=`⏳ Analizando ${files.length} archivo(s)...`;st.style.color='var(--amber)';
   const resultados=[];
   for(const file of files){
+    // PDF estado de cuenta → liquidación semanal (transferencia real)
+    if(file.name.toLowerCase().endsWith('.pdf')){
+      if(!file.name.toLowerCase().includes('estado-de-cuenta')){resultados.push(`⤳ ${file.name}: PDF ignorado (no es estado-de-cuenta)`);continue;}
+      try{
+        const liq=await parsePYLiquidacion(file);
+        const idx=ST.py.liquidaciones.findIndex(x=>x.periodo===liq.periodo);
+        if(idx>=0)ST.py.liquidaciones[idx]=liq; else ST.py.liquidaciones.push(liq);
+        await batchUpsert('py_liquidaciones',[{
+          periodo:liq.periodo,
+          periodo_desde:liq.desde?liq.desde.split('/').reverse().join('-'):null,
+          periodo_hasta:liq.hasta?liq.hasta.split('/').reverse().join('-'):null,
+          mes:liq.hasta?liq.hasta.split('/').reverse().slice(0,2).join('-'):null,
+          ventas_netas:liq.ventas_netas,servicios_py:liq.servicios_py,cargos_operativos:liq.cargos_operativos,
+          publicidad:liq.publicidad,reintegros:liq.reintegros,ajustes:liq.ajustes,
+          impuestos_retenciones:liq.impuestos_retenciones,ventas_fuera_app:liq.ventas_fuera_app,
+          credito_py:liq.credito_py,total:liq.total,raw:liq
+        }],'periodo');
+        computeGlobals();renderPY();renderPL();renderControlRoom();
+        resultados.push(`✓ ${file.name} → liquidación ${liq.cuadra?'✓':'⚠ NO cuadra'} (${fmt(liq.total)})`);
+      }catch(e){resultados.push(`❌ ${file.name}: ${e.message}`);}
+      continue;
+    }
     const buf=await file.arrayBuffer();
     let rows=[];
     if(file.name.endsWith('.csv')){
