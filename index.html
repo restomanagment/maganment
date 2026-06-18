@@ -459,12 +459,12 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
       <div class="dz-sub">Exportes del portal Partner</div>
       <div class="dz-types">
         <span class="dz-type py">invoice</span>
-        <span class="dz-type py">estado-de-cuenta.csv</span>
+        <span class="dz-type py">estado-de-cuenta.pdf</span>
         <span class="dz-type py">reintegros</span>
         <span class="dz-type py">cargos</span>
       </div>
       <button class="dz-btn py" onclick="document.getElementById('fi-py').click()">SELECCIONAR ARCHIVOS</button>
-      <input type="file" id="fi-py" multiple accept=".xls,.xlsx,.csv" onchange="handleFiles(this.files,'py')">
+      <input type="file" id="fi-py" multiple accept=".xls,.xlsx,.csv,.pdf" onchange="handleFiles(this.files,'py')">
       <div class="dz-status" id="st-py"></div>
     </div>
     <div class="drop-zone fudo" id="dz-fudo" ondragover="dzDrag(event,'fudo')" ondragleave="dzLeave('fudo')" ondrop="dzDrop(event,'fudo')">
@@ -618,6 +618,9 @@ span.flatpickr-weekday{color:#AEADB5!important;font-size:10px;font-weight:600;}
 
     <div class="slabel anim d2">LIQUIDACIÓN PY</div>
     <div class="py-liquidacion anim d2" id="py-liquidacion"></div>
+
+    <div class="slabel anim d2">LIQUIDACIÓN REAL · TRANSFERENCIAS PY <span style="color:var(--muted);font-weight:400;font-size:8px">desde estado de cuenta</span></div>
+    <div class="anim d2" id="py-liq-real"></div>
 
     <div class="slabel anim d3">POR MARCA EN PY</div>
     <div class="brand-grid anim d3" id="py-brands"></div>
@@ -1177,6 +1180,28 @@ async function saveToSupabase(){
       await batchUpsert('py_cargos', rows, 'nro_pedido');
     }
 
+    // PY Liquidaciones (estado de cuenta semanal)
+    if(ST.py.liquidaciones.length){
+      const rows=ST.py.liquidaciones.map(l=>({
+        periodo: l.periodo,
+        periodo_desde: l.desde?l.desde.split('/').reverse().join('-'):null,
+        periodo_hasta: l.hasta?l.hasta.split('/').reverse().join('-'):null,
+        mes: l.hasta?l.hasta.split('/').reverse().slice(0,2).join('-'):null,
+        ventas_netas: l.ventas_netas,
+        servicios_py: l.servicios_py,
+        cargos_operativos: l.cargos_operativos,
+        publicidad: l.publicidad,
+        reintegros: l.reintegros,
+        ajustes: l.ajustes,
+        impuestos_retenciones: l.impuestos_retenciones,
+        ventas_fuera_app: l.ventas_fuera_app,
+        credito_py: l.credito_py,
+        total: l.total,
+        raw: l
+      }));
+      await batchUpsert('py_liquidaciones', rows, 'periodo');
+    }
+
     // Fudo Orders
     if(ST.fudo.enriched.length){
       const rows=ST.fudo.enriched.map(o=>({
@@ -1239,10 +1264,11 @@ async function loadFromSupabase(){
   toast.textContent='⏳ Cargando desde Supabase...';
   toast.classList.add('show');
   try{
-    const [pyV, pyR, pyC, fudoO, fudoG] = await Promise.all([
+    const [pyV, pyR, pyC, pyL, fudoO, fudoG] = await Promise.all([
       fetchAll('py_ventas','raw','fecha_pedido'),
       fetchAll('py_reintegros','raw'),
       fetchAll('py_cargos','raw'),
+      fetchAll('py_liquidaciones','raw'),
       fetchAll('fudo_orders','*','fecha'),
       fetchAll('fudo_gastos','raw')
     ]);
@@ -1250,6 +1276,7 @@ async function loadFromSupabase(){
     if(pyV.length){ST.py.ventas=pyV.map(r=>r.raw);ST.py.loaded=true;}
     if(pyR.length){ST.py.reintegros=pyR.map(r=>r.raw);}
     if(pyC.length){ST.py.cargos=pyC.map(r=>r.raw);}
+    if(pyL.length){ST.py.liquidaciones=pyL.map(r=>r.raw);ST.py.loaded=true;}
     if(fudoO.length){
       ST.fudo.enriched=fudoO.map(o=>({
         id:o.fudo_id.split('_')[0], total:o.total, neto:o.neto, bruto:o.bruto??(o.total+o.descuento), desc:o.descuento, idOrigen:o.id_origen,
@@ -1316,7 +1343,7 @@ function parseFechaISO(v){
 }
 
 const ST = {
-  py:{ ventas:[], reintegros:[], cargos:[], loaded:false },
+  py:{ ventas:[], reintegros:[], cargos:[], liquidaciones:[], loaded:false },
   fudo:{ orders:[], gastos:[], pagosRaw:[], enriched:[], loaded:false },
   galicia:{ movimientos:[], creditos:[], debitos:[], porMes:{}, loaded:false },
   filter:{ py:{brand:'all',canal:'all'}, fudo:{brand:'all',canal:'all'} },
@@ -1437,12 +1464,74 @@ function dzDrag(e,t){e.preventDefault();document.getElementById('dz-'+t).classLi
 function dzLeave(t){document.getElementById('dz-'+t).classList.remove('drag-over');}
 function dzDrop(e,t){e.preventDefault();dzLeave(t);handleFiles(e.dataTransfer.files,t);}
 
+// ── PARSER ESTADO DE CUENTA PY (PDF) ──
+// Reconstruye el desglose de liquidación y reconcilia al monto transferido exacto.
+function parseMontoAR(s){
+  if(s==null)return 0;
+  s=String(s).replace(/ARS/gi,'').replace(/[^\d.,\-]/g,'').trim();
+  s=s.replace(/\./g,'').replace(',','.');           // miles=punto, decimal=coma
+  const n=parseFloat(s);
+  return isNaN(n)?0:n;
+}
+
+async function parsePYLiquidacion(file){
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+  const lines=[];
+  for(let p=1;p<=pdf.numPages;p++){
+    const page=await pdf.getPage(p);
+    const tc=await page.getTextContent();
+    const byY={};
+    tc.items.forEach(it=>{
+      const y=Math.round(it.transform[5]);
+      (byY[y]=byY[y]||[]).push({x:it.transform[4],s:it.str});
+    });
+    Object.keys(byY).map(Number).sort((a,b)=>b-a).forEach(y=>{
+      const ln=byY[y].sort((a,b)=>a.x-b.x).map(o=>o.s).join(' ').replace(/\s+/g,' ').trim();
+      if(ln)lines.push(ln);
+    });
+  }
+  const full=lines.join('\n');
+  // Devuelve el monto sólo si tras la etiqueta queda EXACTAMENTE un número (línea limpia de 1 columna)
+  const getVal=(label)=>{
+    for(const raw of lines){
+      const ln=raw.replace(/\*/g,'').replace(/\s+/g,' ').trim();
+      if(ln.startsWith(label)){
+        const rest=ln.slice(label.length).replace(/ARS/gi,'').trim();
+        if(/^-?\$?\s*[\d.]+,\d{2}$/.test(rest))return parseMontoAR(rest);
+      }
+    }
+    return 0;
+  };
+  const mper=full.match(/Per[ií]odo del (\d{2}\/\d{2}\/\d{4}) al (\d{2}\/\d{2}\/\d{4})/);
+  const desde=mper?mper[1]:null, hasta=mper?mper[2]:null;
+  const liq={
+    periodo: desde&&hasta?`${desde.split('/').reverse().join('-')}_${hasta.split('/').reverse().join('-')}`:file.name,
+    desde, hasta,
+    ventas_netas:          getVal('Ventas netas'),
+    servicios_py:          getVal('Servicios PedidosYa'),
+    cargos_operativos:     getVal('Cargos operativos'),
+    publicidad:            getVal('Publicidad dentro de la aplicación'),
+    reintegros:            getVal('Reintegros'),
+    ajustes:               getVal('Ajustes de liquidación'),
+    impuestos_retenciones: getVal('Impuestos y Retenciones'),
+    ventas_fuera_app:      getVal('Ventas con pago por fuera de la aplicación ya cobradas'),
+    credito_py:            getVal('Total Crédito PedidosYa'),
+  };
+  const mtot=full.match(/Total liquidado[^\n]*?(-?[\d.]+,\d{2})/);
+  liq.total=mtot?parseMontoAR(mtot[1]):0;
+  liq.suma=liq.ventas_netas+liq.servicios_py+liq.cargos_operativos+liq.publicidad+liq.reintegros+liq.ajustes+liq.impuestos_retenciones+liq.ventas_fuera_app+liq.credito_py;
+  liq.cuadra=Math.abs(liq.suma-liq.total)<1;
+  return liq;
+}
+
 async function handleFiles(files,type){
   const allFiles=Array.from(files);
   const xlsFiles=allFiles.filter(f=>f.name.match(/\.(xls|xlsx)$/i));
   const csvFiles=allFiles.filter(f=>f.name.match(/\.csv$/i));
-  
-  if(!xlsFiles.length && !csvFiles.length)return;
+  const pdfFiles=allFiles.filter(f=>f.name.match(/\.pdf$/i)&&f.name.toLowerCase().includes('estado-de-cuenta'));
+
+  if(!xlsFiles.length && !csvFiles.length && !pdfFiles.length)return;
   
   const st=document.getElementById('st-'+type);
   st.className='dz-status loading';st.textContent=`⏳ Leyendo ${allFiles.length} archivos...`;
@@ -1521,6 +1610,17 @@ async function handleFiles(files,type){
         ST.py.loaded=true;
       }
     }catch(e){console.warn('Error CSV:',f.name,e);}
+  }
+
+  // Procesar PDF (estado de cuenta PY → liquidación semanal)
+  for(const f of pdfFiles){
+    try{
+      const liq=await parsePYLiquidacion(f);
+      const i=ST.py.liquidaciones.findIndex(x=>x.periodo===liq.periodo);
+      if(i>=0)ST.py.liquidaciones[i]=liq; else ST.py.liquidaciones.push(liq);
+      ST.py.loaded=true;
+      if(!liq.cuadra)console.warn('Liquidación no cuadra:',f.name,'suma',liq.suma,'total',liq.total);
+    }catch(e){console.warn('Error PDF:',f.name,e);}
   }
 
   st.className='dz-status ok';
@@ -2101,7 +2201,64 @@ function renderPY(){
       </div>`).join('');
   }
 
-  // Brands PY — reintegros y cargos ya filtrados por fecha arriba
+  // ── LIQUIDACIÓN REAL (transferencias PY desde estado de cuenta) ──
+  const lrEl=document.getElementById('py-liq-real');
+  if(lrEl){
+    const L=ST.py.liquidaciones||[];
+    if(!L.length){
+      lrEl.innerHTML=`<div style="background:var(--surface);border:1px dashed var(--border2);border-radius:12px;padding:18px;color:var(--muted);font-size:10px;text-align:center">Cargá los PDF <b>estado-de-cuenta</b> de PedidosYa para ver lo que te transfieren realmente cada semana (comisiones, impuestos y retenciones incluidas).</div>`;
+    } else {
+      const Ls=[...L].sort((a,b)=>String(a.desde||'').split('/').reverse().join('').localeCompare(String(b.desde||'').split('/').reverse().join('')));
+      const sum=k=>Ls.reduce((s,l)=>s+(+l[k]||0),0);
+      const agg={
+        ventas_netas:sum('ventas_netas'),servicios_py:sum('servicios_py'),cargos_operativos:sum('cargos_operativos'),
+        publicidad:sum('publicidad'),reintegros:sum('reintegros'),ajustes:sum('ajustes'),
+        impuestos_retenciones:sum('impuestos_retenciones'),ventas_fuera_app:sum('ventas_fuera_app'),
+        credito_py:sum('credito_py'),total:sum('total')
+      };
+      const rows=[
+        ['','Ventas netas',agg.ventas_netas],
+        ['−','Servicios PedidosYa',agg.servicios_py],
+        ['−','Cargos operativos',agg.cargos_operativos],
+        ['−','Publicidad en la app',agg.publicidad],
+        ['+','Reintegros',agg.reintegros],
+        ['±','Ajustes de liquidación',agg.ajustes],
+        ['−','Impuestos y retenciones',agg.impuestos_retenciones],
+        ['−','Ventas cobradas fuera de la app',agg.ventas_fuera_app],
+        ['−','Crédito PedidosYa',agg.credito_py],
+      ];
+      const breakdown=rows.map(([op,lbl,v])=>`
+        <div style="display:flex;align-items:center;gap:8px;padding:7px 12px;border-bottom:1px solid var(--border)">
+          <span style="width:14px;color:var(--muted);font-family:'DM Mono',monospace">${op}</span>
+          <span style="flex:1;font-size:10px">${lbl}</span>
+          <span style="font-family:'DM Mono',monospace;font-size:11px;color:${v>=0?'var(--green)':'var(--red)'}">${fmt(v)}</span>
+        </div>`).join('');
+      const weeks=Ls.map(l=>`
+        <tr>
+          <td style="font-family:'DM Mono',monospace;font-size:9px">${l.desde||''} → ${l.hasta||''}</td>
+          <td style="text-align:right;font-family:'DM Mono',monospace;font-size:10px;color:var(--green)">${fmt(l.total)}</td>
+          <td style="text-align:center">${l.cuadra===false?'<span style="color:var(--red)">⚠</span>':'<span style="color:var(--green)">✓</span>'}</td>
+        </tr>`).join('');
+      lrEl.innerHTML=`
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+          <div style="background:var(--surface);border:1px solid rgba(123,97,255,0.35);border-radius:12px;overflow:hidden">
+            <div style="padding:9px 12px;font-size:9px;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">DESGLOSE AGREGADO (${Ls.length} ${Ls.length===1?'semana':'semanas'})</div>
+            ${breakdown}
+            <div style="display:flex;align-items:center;gap:8px;padding:11px 12px;background:rgba(123,97,255,0.08)">
+              <span style="width:14px;color:#7B61FF;font-family:'DM Mono',monospace">=</span>
+              <span style="flex:1;font-size:11px;font-weight:700">TRANSFERIDO REAL</span>
+              <span style="font-family:'DM Mono',monospace;font-size:14px;font-weight:700;color:#7B61FF">${fmt(agg.total)}</span>
+            </div>
+          </div>
+          <div style="background:var(--surface);border:1px solid var(--border2);border-radius:12px;overflow:hidden">
+            <div style="padding:9px 12px;font-size:9px;letter-spacing:0.08em;color:var(--muted);border-bottom:1px solid var(--border)">TRANSFERENCIAS POR SEMANA</div>
+            <table style="width:100%;border-collapse:collapse">
+              <tbody>${weeks}</tbody>
+            </table>
+          </div>
+        </div>`;
+    }
+  }
   const reByBrand={};filteredRei.forEach(r=>{const bk=bSuc(String(nc(r,'Sucursal')||''));reByBrand[bk]=(reByBrand[bk]||0)+num(nc(r,'Monto neto a reintegrar'));});
   const caByBrand={};filteredCar.forEach(r=>{const bk=bSuc(String(nc(r,'Sucursal')||''));caByBrand[bk]=(caByBrand[bk]||0)+Math.abs(num(nc(r,'Cargos por reclamos de los usuarios')));});
 
