@@ -1278,11 +1278,16 @@ async function loadFromSupabase(){
     if(pyC.length){ST.py.cargos=pyC.map(r=>r.raw);}
     if(pyL.length){ST.py.liquidaciones=pyL.map(r=>r.raw);ST.py.loaded=true;}
     if(fudoO.length){
-      ST.fudo.enriched=fudoO.map(o=>({
-        id:o.fudo_id.split('_')[0], total:o.total, neto:o.neto, bruto:o.bruto??(o.total+o.descuento), desc:o.descuento, idOrigen:o.id_origen,
-        mes:o.mes, hora:o.hora, brand:o.brand, canal:o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio'), origen:o.origen,
-        fecha:o.fecha?new Date(o.fecha):null
-      }));
+      ST.fudo.enriched=fudoO.map(o=>{
+        const canal=o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio');
+        const total=o.total, desc=o.descuento||0;
+        const descPropio=canal==='propio'?desc:0;
+        return{
+          id:o.fudo_id.split('_')[0], total, neto:total-descPropio, bruto:total, desc:descPropio, idOrigen:o.id_origen,
+          mes:o.mes, hora:o.hora, brand:o.brand, canal, origen:o.origen,
+          fecha:o.fecha?new Date(o.fecha):null
+        };
+      });
       ST.fudo.loaded=true;
     }
     if(fudoG.length){ST.fudo.gastos=fudoG.map(r=>normGasto(r.raw)).filter(Boolean);}
@@ -1855,7 +1860,9 @@ function processFudo(){
     const desc=descMap[id]||0;
     const canal=String(v['Origen']||'').toLowerCase().includes('pedidos')?'py':'propio';
     const idOrigen=parseInt(String(v['Id. Origen']||'').replace(/\D/g,''))||null;
-    return{id,bruto:total+desc,neto:total,desc,total,mes,hora,brand,canal,origen:v['Origen'],idOrigen,fecha:dateObj};
+    // bruto = total cobrado (todos los canales). PY ya viene neto → desc solo cuenta en propio.
+    const descPropio=canal==='propio'?desc:0;
+    return{id,bruto:total,neto:total-descPropio,desc:descPropio,total,mes,hora,brand,canal,origen:v['Origen'],idOrigen,fecha:dateObj};
   });
 }
 
@@ -1881,10 +1888,11 @@ function computeGlobals(){
   },0);
   const pyNeto=pyNetoVentas+pyReintegros-pyReclamos;
 
-  const fBruto=fV.reduce((s,o)=>s+(o.bruto??o.total),0);   // lista = total+desc
-  const fNeto=fV.reduce((s,o)=>s+o.neto,0);                 // cobrado = total
+  const fBruto=fV.reduce((s,o)=>s+o.total,0);              // cobrado real (todos los canales)
+  const fDescPropio=fV.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.desc,0);
+  const fNeto=fBruto-fDescPropio;                           // neto real (PY ya viene neto)
   const fDesc=fV.reduce((s,o)=>s+o.desc,0);
-  const fPropio=fV.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.neto,0); // cobrado propio
+  const fPropio=fV.filter(o=>o.canal==='propio').reduce((s,o)=>s+o.total,0)-fDescPropio; // propio neto
   const fGastos=ST.fudo.gastos.reduce((s,g)=>s+num(g['Importe']),0);
 
   // Dependencia (sobre NETO Fudo)
@@ -2378,7 +2386,7 @@ function renderCanal(){if(!document.getElementById('canal-kpis'))return;
     {l:'VENTAS CANAL PROPIO',v:fmt(propioTotal),s:`${propio.length} pedidos`,a:'var(--blue)'},
     {l:'MIX CANAL PROPIO',v:(c.mixPropio||0).toFixed(1)+'%',s:'objetivo: crecer a 35%+',a:c.mixPropio>35?'var(--green)':c.mixPropio>25?'var(--amber)':'var(--red)'},
     {l:'TICKET PROPIO',v:fmt(propioTk),s:`vs ${fmt(pyTk)} en PY`,a:'var(--blue)'},
-    {l:'VENTAS NETAS PROPIO',v:fmt(propioNeto),s:pct(propioNeto,propioTotal)+' sin descuentos',a:'var(--green)'},
+    {l:'VENTAS NETAS PROPIO',v:fmt(propioNeto),s:pct(propioNeto,propioTotal)+' neto de descuentos',a:'var(--green)'},
     {l:'AHORRO EN COMISIONES',v:fmt(c.ahorroCanal),s:`a ${(c.pctComPY*100).toFixed(1)}% comisión PY estimada`,a:'var(--green)'},
     {l:'MARGEN ADICIONAL',v:c.pctComPY?((c.pctComPY)*100).toFixed(1)+'%':'~20%',s:'ventaja de margen vs canal PY',a:'var(--green)'},
   ].map(k=>`<div class="kpi" style="--accent:${k.a}"><div class="kpi-label">${k.l}</div><div class="kpi-value">${k.v}</div><div class="kpi-sub">${k.s}</div></div>`).join('');
@@ -2506,12 +2514,11 @@ function filterLiqByPeriod(liqs){
 function renderPL(){
   // ── DATOS FUDO (fuente de verdad de ventas) ──
   const fOrders=filterFudoByPeriod(ST.fudo.enriched);
-  // Ventas brutas: total + desc para reconstruir precio original
-  // Descuentos: solo canal propio (PY ya viene neto de descuentos desde la plataforma)
-  // fBruto = precio real cobrado al cliente (o.total ya refleja precio con descuentos aplicados)
-  // No reconstruimos el precio de lista porque canal PY puede tener canal=null en Supabase
+  // Consistente con Fudo Ops (renderFudo): bruto = total realmente cobrado.
+  // PY ya viene neto de descuentos de plataforma → solo se restan descuentos del canal propio.
+  // NO se reconstruye precio de lista (total+desc) porque infla las ventas de PY.
   const getCanal=o=>o.canal||(String(o.origen||'').toLowerCase().includes('pedidos')?'py':'propio');
-  const fBruto=fOrders.reduce((s,o)=>s+(o.bruto??o.total),0);  // lista
+  const fBruto=fOrders.reduce((s,o)=>s+o.total,0);  // cobrado real, todos los canales
   const fDesc=fOrders.filter(o=>getCanal(o)==='propio').reduce((s,o)=>s+o.desc,0);
   const fNeta=fBruto-fDesc;
   const fOrdenesPY=fOrders.filter(o=>o.canal==='py');
@@ -2569,8 +2576,8 @@ function renderPL(){
   };
 
   let html='<div class="eerr">';
-  html+=mkRow('','Ventas Brutas (lista)',hasFudo?fBruto:null,null,'','Fudo — precio de lista, todos los canales');
-  html+=mkRow('−','Descuentos',hasFudo?-fDesc:null,fBruto,'','promo aplicada');
+  html+=mkRow('','Ventas Brutas (cobrado)',hasFudo?fBruto:null,null,'','Fudo — total cobrado, todos los canales');
+  html+=mkRow('−','Descuentos',hasFudo?-fDesc:null,fBruto,'','solo canal propio');
   html+=mkRow('=','VENTAS NETAS',hasFudo?fNeta:null,fBruto,'subtotal','brutas − descuentos');
   html+=`<div class="eerr-row separator"></div>`;
   if(hasLiq){
