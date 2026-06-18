@@ -2386,27 +2386,26 @@ function renderPL(){
   };
 
   let html='<div class="eerr">';
-  const fNetoCobrado=fOrders.reduce((s,o)=>s+o.neto,0);   // cobrado = total
   html+=mkRow('','Ventas Brutas (lista)',hasFudo?fBruto:null,null,'','Fudo — precio de lista, todos los canales');
   html+=mkRow('−','Descuentos',hasFudo?-fDesc:null,fBruto,'','promo aplicada');
-  html+=mkRow('=','VENTAS NETAS (cobrado)',hasFudo?fNetoCobrado:null,fBruto,'subtotal','lo efectivamente cobrado');
+  html+=mkRow('=','VENTAS NETAS',hasFudo?fNeta:null,fBruto,'subtotal','brutas − descuentos');
   html+=`<div class="eerr-row separator"></div>`;
-  html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNetoCobrado,'','sobre ventas canal PY');
-  html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNetoCobrado,'');
-  html+=mkRow('+','Reintegros recibidos',hasPY?pyReintegros:null,fNetoCobrado,'');
-  html+=mkRow('=','NETO REAL',hasFudo||hasPY?netoReal:null,fNetoCobrado,'subtotal','');
+  html+=mkRow('−','Comisión PedidosYa',hasPY?-pyComision:null,fNeta,'','sobre ventas canal PY');
+  html+=mkRow('−','Cargos por reclamos',hasPY?-pyReclamos:null,fNeta,'');
+  html+=mkRow('+','Reintegros recibidos',hasPY?pyReintegros:null,fNeta,'');
+  html+=mkRow('=','NETO REAL',hasFudo||hasPY?netoReal:null,fNeta,'subtotal','');
   html+=`<div class="eerr-row separator"></div>`;
 
   if(gastos>0){
     Object.entries(gC).sort((a,b)=>b[1]-a[1]).forEach(([cat,val])=>{
-      html+=mkRow('−',cat,-val,fNetoCobrado,'');
+      html+=mkRow('−',cat,-val,fNeta,'');
     });
   } else {
     html+=mkRow('−','Gastos operativos (Fudo)',null,null,'','cargá gastos en Fudo');
   }
   html+=`<div class="eerr-row separator"></div>`;
   const resCls=resultado>=0?'total':'total-neg';
-  html+=mkRow('=','RESULTADO OPERATIVO',hasFudo||hasPY?resultado:null,fNetoCobrado,resCls,'');
+  html+=mkRow('=','RESULTADO OPERATIVO',hasFudo||hasPY?resultado:null,fNeta,resCls,'');
   html+='</div>';
 
   (document.getElementById('pl-waterfall')||{set innerHTML(v){}} ).innerHTML=html;
